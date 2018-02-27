@@ -7,10 +7,12 @@ class DBSession(object):
         self.func = func
     def __get__(self, obj, type=None):
         return self.__class__(self.func.__get__(obj, type))
-    def __call__(self, *args, **kw):
+    def createConn(self):
         if(self.__class__._flagConnOpen == False):
             self.__class__._db = sqlite3.connect(':memory:')
             self.__class__._flagConnOpen = True
+    def __call__(self, *args, **kw):
+        self.createConn()
         cursor = self.__class__._db.cursor()
         try:
             cursor.execute("BEGIN")
@@ -24,19 +26,24 @@ class DBSession(object):
             cursor.close()
         return retval
 
+
 @DBSession
-def storeMeasurement(cursor, value, interface):
+def storeResult(cursor, result, interface, ignored_count):
     cursor.execute('''CREATE TABLE IF NOT EXISTS 
-                    bandwidth(
+                    link_usage(
                         id INTEGER PRIMARY KEY, 
                         interface VARCHAR(40), 
-                        value INTEGER, 
+                        result INTEGER,
+                        ignored_count INTEGER,
                         time DATETIME DEFAULT CURRENT_TIMESTAMP
                     )''')
-    cursor.execute("insert into bandwidth (interface, value) values ('"+interface+"', '"+str(value)+"')")
+    cursor.execute('''insert into bandwidth (interface, ignored_count, result)
+                        values ("{interface}", "{ignored_count}", "{result}")'''
+                        .format(interface=interface, ignored_count=str(ignored_count), result=str(result))
+                    )
 
 
 @DBSession
-def printMeasurement(cursor):
+def printMeasurements(cursor):
     result = cursor.execute("select * from bandwidth")
     print(result.fetchall())
