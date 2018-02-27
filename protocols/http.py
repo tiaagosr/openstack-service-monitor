@@ -1,0 +1,2 @@
+SNIFF_FILTER = "tcp port 1052"
+SNIFF_INTERFACE = "wlp2s0"
