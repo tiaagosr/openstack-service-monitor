@@ -3,8 +3,8 @@ from threading import Thread, Timer, Event
 from database import *
 
 METERING_INTERVAL = 10
-SNIFF_INTERFACE = "wlp2s0"
-SNIFF_FILTER = "tcp"
+SNIFF_INTERFACE = 'wlp2s0'
+SNIFF_FILTER = 'tcp'
 
 metering_buffer, ignored_packets = 0, 0
 
@@ -40,12 +40,13 @@ class LinkMetering(Thread):
         self.stopped.set()
 
 
-def start_link_metering(interval=METERING_INTERVAL, iface=SNIFF_INTERFACE, filter=SNIFF_FILTER):
+def start_link_metering(interval=METERING_INTERVAL, iface=SNIFF_INTERFACE, filter=SNIFF_FILTER, sqli_path=DBSession.sqli_path):
     if interval != METERING_INTERVAL:
         set_metering_interval(interval)
-    print("executing, interval: "+str(interval))
+    DBSession.sqli_path = sqli_path
+    print("Metering link usage, interval: "+str(interval))
 
-    metering_sniff = Thread(target=sniff, kwargs={"iface":SNIFF_INTERFACE, "prn":measure_packet, "filter":SNIFF_FILTER})
+    metering_sniff = Thread(target=sniff, kwargs={'iface':iface, 'prn':measure_packet, 'filter':filter})
     metering_sniff.start()
     
     link_metering = LinkMetering()
