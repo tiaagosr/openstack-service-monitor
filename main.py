@@ -1,7 +1,7 @@
 import imports
 from scapy.all import *
 from protocols import amqp
-from modules.measureBandwith import *
+from modules.linkusage import start_link_metering
 
 #[IP][TCP][Raw]
 
@@ -10,7 +10,4 @@ SNIFF_INTERFACE = "wlp2s0"
 
 SNIFF_FILTER = ""
 
-def arp_display(pkt):
-    return pkt.summary()
- 
-sniff(iface=SNIFF_INTERFACE, prn=countTraffic, filter=SNIFF_FILTER)
+start_link_metering(10)

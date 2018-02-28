@@ -2,7 +2,7 @@ from scapy.all import *
 from threading import Thread, Timer, Event
 from database import *
 
-METERING_INTERVAL = 5
+METERING_INTERVAL = 10
 SNIFF_INTERFACE = "wlp2s0"
 SNIFF_FILTER = "tcp"
 
@@ -23,8 +23,9 @@ def measure_packet(packet):
 def calculate_usage():
     global metering_buffer, ignored_packets
     result = int(metering_buffer / METERING_INTERVAL)
-    storeResult(result, SNIFF_INTERFACE, ignored_packets)
+    store_result(result=result, interface=SNIFF_INTERFACE, ignored_count=ignored_packets)
     metering_buffer, ignored_packets = 0, 0
+    print_results()
 
 class LinkMetering(Thread):
     def __init__(self):
@@ -34,10 +35,18 @@ class LinkMetering(Thread):
     def run(self):
         while not self.stopped.wait(METERING_INTERVAL):
             calculate_usage()
-              
 
-    def stopExecution(self):
+    def stop_execution(self):
         self.stopped.set()
 
-link_metering = LinkMetering()
-link_metering.start()
+
+def start_link_metering(interval=10):
+    if interval != METERING_INTERVAL:
+        set_metering_interval(interval)
+    print("executing, interval: "+str(interval))
+
+    metering_sniff = Thread(target=sniff, kwargs={"iface":SNIFF_INTERFACE, "prn":measure_packet, "filter":SNIFF_FILTER})
+    metering_sniff.start()
+    
+    link_metering = LinkMetering()
+    link_metering.start()
