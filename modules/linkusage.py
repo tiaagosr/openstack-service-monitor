@@ -23,7 +23,7 @@ def measure_packet(packet):
 def calculate_usage():
     global metering_buffer, ignored_packets
     result = int(metering_buffer / METERING_INTERVAL)
-    store_result(result=result, interface=SNIFF_INTERFACE, ignored_count=ignored_packets)
+    store_result(result=result, iface=SNIFF_INTERFACE, ignored_count=ignored_packets)
     metering_buffer, ignored_packets = 0, 0
     print_results()
 
@@ -40,7 +40,7 @@ class LinkMetering(Thread):
         self.stopped.set()
 
 
-def start_link_metering(interval=10):
+def start_link_metering(interval=METERING_INTERVAL, iface=SNIFF_INTERFACE, filter=SNIFF_FILTER):
     if interval != METERING_INTERVAL:
         set_metering_interval(interval)
     print("executing, interval: "+str(interval))

@@ -28,7 +28,7 @@ class DBSession(object):
 
 
 @DBSession
-def store_result(cursor, result=0, interface="None", ignored_count=0):
+def store_result(cursor, result=0, iface="None", ignored_count=0):
     cursor.execute('''CREATE TABLE IF NOT EXISTS 
                     link_usage(
                         id INTEGER PRIMARY KEY, 
