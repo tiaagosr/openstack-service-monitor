@@ -1,4 +1,4 @@
-from scapy.all import *
+from scapy.all import IP, Packet, sniff
 from threading import Thread, Timer, Event
 from database import *
 
@@ -45,9 +45,7 @@ def start_link_metering(interval=METERING_INTERVAL, iface=SNIFF_INTERFACE, filte
         set_metering_interval(interval)
     DBSession.sqli_path = sqli_path
     print("Metering link usage, interval: "+str(interval))
-
     metering_sniff = Thread(target=sniff, kwargs={'iface':iface, 'prn':measure_packet, 'filter':filter})
     metering_sniff.start()
-    
     link_metering = LinkMetering()
     link_metering.start()

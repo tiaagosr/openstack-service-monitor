@@ -1,2 +1,4 @@
-SNIFF_FILTER = "tcp port 1052"
-SNIFF_INTERFACE = "wlp2s0"
+import json
+
+def parse_content(text):
+    content = json.loads(text)

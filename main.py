@@ -1,10 +1,6 @@
 import imports
-from scapy.all import *
-from protocols import amqp
 from modules.linkusage import start_link_metering
+from modules.apilogging import start_api_logging
 
-#[IP][TCP][Raw]
-
-#SNIFF_FILTER = "tcp port 1052"
-
-start_link_metering(interval=10, iface='wlp2s0', filter='udp')
+start_api_logging()
+#start_link_metering(interval=10, iface='wlp2s0', filter='tcp',sqli_path=':memory:')
