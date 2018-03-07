@@ -10,7 +10,7 @@ class DBSession(object):
         return self.__class__(self.func.__get__(obj, type))
     def create_conn(self):
         if(self.__class__._flagConnOpen == False):
-            self.__class__._db = sqlite3.connect(self.__class__.sqli_path)
+            self.__class__._db = sqlite3.connect(self.__class__.sqli_path, isolation_level=None)
             self.__class__._flagConnOpen = True
     def __call__(self, *args, **kw):
         self.create_conn()
@@ -52,5 +52,5 @@ def store_metering_result(cursor, result={}, iface='None', ignored_count=0):
 
 @DBSession
 def print_results(cursor):
-    result = cursor.execute("select * from link_usage")
-    print(result.fetchall())
+    result = cursor.execute("select * from link_usage order by time DESC LIMIT 1")
+    print(result.fetchone())
