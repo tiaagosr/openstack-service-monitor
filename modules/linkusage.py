@@ -6,7 +6,7 @@ METERING_INTERVAL = 10
 SNIFF_INTERFACE = 'wlp2s0'
 SNIFF_FILTER = 'tcp'
 
-metering_buffer = {'etc' : 0, 'nova': 0, 'keystone': 0, 'swift': 0, 'glance': 0, 'cinder': 0}
+metering_buffer = {}
 metering_result = {'etc' : 0, 'nova': 0, 'keystone': 0, 'swift': 0, 'glance': 0, 'cinder': 0}
 ignored_packets = 0
 port_range = {'nova': set([5900, 6080, 6081, 6082, 8773, 8774, 8775] + list(range(5900, 5999))), 
@@ -26,21 +26,27 @@ def set_interface(value):
 def measure_packet(packet):
     if TCP in packet:
         global metering_buffer
-        port_dst = packet[TCP].dport
-        packet_class = classify_packet(port_dst)
-        metering_buffer[packet_class] += packet[IP].len
+        
+        d_port = packet[TCP].dport
+        port_sum = metering_buffer.get(d_port, 0)
+        metering_buffer[d_port] = packet[IP].len + port_sum
+    elif IP in packet: #Sem porta de destino
+        metering_result['etc'] += packet[IP].len
     else:
         global ignored_packets
         ignored_packets += 1
 
 def calculate_usage():
-    global metering_buffer, ignored_packets
-    for service in metering_buffer:
-        metering_buffer[service] = metering_buffer[service] / METERING_INTERVAL
+    global metering_buffer, ignored_packets, metering_result
+    for port in metering_buffer:
+        port_usage = metering_buffer[port] / METERING_INTERVAL
+        service = classify_service(port)
+        metering_result[service] += port_usage
     store_metering_result(result=dict(metering_buffer), iface=SNIFF_INTERFACE, ignored_count=ignored_packets)
-    for service in metering_buffer:
-        metering_buffer[service] = 0
+    for service in metering_result:
+        metering_result[service] = 0
     ignored_packets = 0
+    metering_buffer = {}
     #print_results()
 
 class LinkMetering(Thread):
@@ -55,7 +61,7 @@ class LinkMetering(Thread):
     def stop_execution(self):
         self.stopped.set()
 
-def classify_packet(port):
+def classify_service(port):
     for service in port_range:
             if port in port_range[service]:
                 return service
