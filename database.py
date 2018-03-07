@@ -29,19 +29,25 @@ class DBSession(object):
 
 
 @DBSession
-def store_result(cursor, result=0, iface='None', ignored_count=0):
+def store_metering_result(cursor, result={}, iface='None', ignored_count=0):
     cursor.execute('''CREATE TABLE IF NOT EXISTS 
                     link_usage(
-                        id INTEGER PRIMARY KEY, 
-                        interface VARCHAR(40), 
-                        result INTEGER,
+                        id INTEGER PRIMARY KEY,
+                        interface VARCHAR(40),
+                        m_etc INTEGER,
+                        m_nova INTEGER,
+                        m_keystone INTEGER,
+                        m_glance INTEGER,
+                        m_cinder INTEGER,
+                        m_swift INTEGER,
                         ignored_count INTEGER,
                         time DATETIME DEFAULT CURRENT_TIMESTAMP
                     )''')
-    cursor.execute('''insert into link_usage (interface, ignored_count, result)
-                        values ("{iface}", "{ignored_count}", "{result}")'''
-                        .format(iface=iface, ignored_count=str(ignored_count), result=str(result))
+    cursor.execute('''insert into link_usage (interface, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_swift)
+                        values ("{iface}", "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{swift}")'''
+                        .format(iface=iface, ignored_count=str(ignored_count), **result)
                     )
+    del result
 
 
 @DBSession

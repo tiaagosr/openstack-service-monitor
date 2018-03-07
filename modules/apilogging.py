@@ -17,7 +17,7 @@ def evaluate_packet(packet):
         return
 
     if packet.haslayer('HTTP') and packet.haslayer('Raw'):
-        print(packet.summary())
+        #print(packet.summary())
         return packet[IP_layer][TCP][HTTP][Raw].load
 
 def start_api_logging(iface=SNIFF_INTERFACE, filter=SNIFF_FILTER, sqli_path=DBSession.sqli_path):
