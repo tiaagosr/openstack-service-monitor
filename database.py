@@ -12,6 +12,8 @@ class DBSession(object):
         if(self.__class__._flagConnOpen == False):
             self.__class__._db = sqlite3.connect(self.__class__.sqli_path, isolation_level=None)
             self.__class__._flagConnOpen = True
+            cursor = self.__class__._db
+            cursor.execute("PRAGMA cache_size = "+str(50*1024*1024))
     def __call__(self, *args, **kw):
         self.create_conn()
         cursor = self.__class__._db.cursor()
@@ -41,7 +43,7 @@ def store_metering_result(cursor, result={}, iface='None', ignored_count=0):
                         m_cinder INTEGER,
                         m_swift INTEGER,
                         ignored_count INTEGER,
-                        time DATETIME DEFAULT CURRENT_TIMESTAMP
+                        time DATETIME DEFAULT datetime("now", "localtime")
                     )''')
     cursor.execute('''insert into link_usage (interface, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_swift)
                         values ("{iface}", "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{swift}")'''

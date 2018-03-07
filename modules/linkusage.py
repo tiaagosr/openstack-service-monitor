@@ -7,6 +7,7 @@ SNIFF_INTERFACE = 'wlp2s0'
 SNIFF_FILTER = 'tcp'
 
 metering_buffer = {'etc' : 0, 'nova': 0, 'keystone': 0, 'swift': 0, 'glance': 0, 'cinder': 0}
+metering_result = {'etc' : 0, 'nova': 0, 'keystone': 0, 'swift': 0, 'glance': 0, 'cinder': 0}
 ignored_packets = 0
 port_range = {'nova': set([5900, 6080, 6081, 6082, 8773, 8774, 8775] + list(range(5900, 5999))), 
               'keystone': set([5000, 35357]), 
@@ -40,7 +41,7 @@ def calculate_usage():
     for service in metering_buffer:
         metering_buffer[service] = 0
     ignored_packets = 0
-    print_results()
+    #print_results()
 
 class LinkMetering(Thread):
     def __init__(self):
@@ -65,7 +66,7 @@ def start_link_metering(interval=METERING_INTERVAL, iface=SNIFF_INTERFACE, filte
     set_interface(iface)
     DBSession.sqli_path = sqli_path
     print("Metering link usage, interval: "+str(interval))
-    metering_sniff = Thread(target=sniff, kwargs={'iface':iface, 'prn':measure_packet, 'filter':filter})
+    metering_sniff = Thread(target=sniff, kwargs={'iface':iface, 'prn':measure_packet, 'filter':filter, 'store':0})
     metering_sniff.start()
     link_metering = LinkMetering()
     link_metering.start()
