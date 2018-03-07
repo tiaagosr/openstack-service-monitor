@@ -42,7 +42,7 @@ def calculate_usage():
         port_usage = metering_buffer[port] / METERING_INTERVAL
         service = classify_service(port)
         metering_result[service] += port_usage
-    store_metering_result(result=dict(metering_buffer), iface=SNIFF_INTERFACE, ignored_count=ignored_packets)
+    store_metering_result(result=dict(metering_result), iface=SNIFF_INTERFACE, ignored_count=ignored_packets)
     for service in metering_result:
         metering_result[service] = 0
     ignored_packets = 0
