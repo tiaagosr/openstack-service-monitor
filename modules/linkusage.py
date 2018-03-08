@@ -38,6 +38,8 @@ def measure_packet(packet):
 
 def calculate_usage():
     global metering_buffer, ignored_packets, metering_result
+    buffered_result = dict(metering_buffer)
+    metering_buffer = {}
     for port in metering_buffer:
         port_usage = metering_buffer[port] / METERING_INTERVAL
         service = classify_service(port)
@@ -46,7 +48,7 @@ def calculate_usage():
     for service in metering_result:
         metering_result[service] = 0
     ignored_packets = 0
-    metering_buffer = {}
+    
     #print_results()
 
 class LinkMetering(Thread):
