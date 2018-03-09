@@ -1,6 +1,11 @@
 import imports
-from modules.linkusage import start_link_metering
-from modules.apilogging import start_api_logging
+from modules.link_metering import LinkMetering
+#from modules.apilogging import start_api_logging
+from database import DBSession
+#wlp2s0
+#'enp0s20u3'
 
+persistence = DBSession(':memory:')
 #start_api_logging()
-start_link_metering(interval=2, iface='enp0s20u3', filter='tcp', sqli_path=':memory:')
+link_metering = LinkMetering(iface='wlp2s0', filter='tcp', db=persistence, interval=2)
+link_metering.start_monitoring()
