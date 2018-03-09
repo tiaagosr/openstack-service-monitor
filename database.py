@@ -43,7 +43,7 @@ def store_metering_result(cursor, result={}, iface='None', ignored_count=0):
                         m_cinder INTEGER,
                         m_swift INTEGER,
                         ignored_count INTEGER,
-                        time DATETIME DEFAULT datetime("now", "localtime")
+                        time DATETIME DEFAULT CURRENT_TIMESTAMP
                     )''')
     cursor.execute('''insert into link_usage (interface, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_swift)
                         values ("{iface}", "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{swift}")'''

@@ -41,7 +41,7 @@ def calculate_usage():
     for service in metering_buffer:
         metering_buffer[service] = 0
     ignored_packets = 0
-    #print_results()
+    print_results()
 
 class LinkMetering(Thread):
     def __init__(self):
