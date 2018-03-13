@@ -15,8 +15,8 @@ class MonitoringModule(Thread):
     def default_sniff_action(self, packet):
         return
     
-    def start_sniffing(self):
-        self.sniff_thread = Thread(target=sniff, kwargs={'iface':self.sniff_iface, 'prn':self.action, 'filter':self.sniff_filter, 'store':0})
+    def start_sniffing(self, args={}):
+        self.sniff_thread = Thread(target=sniff, kwargs={'iface':self.sniff_iface, 'prn':self.action, 'filter':self.sniff_filter, 'store':0, **args})
         self.sniff_thread.start()
 
     def stop_execution(self):
@@ -34,6 +34,22 @@ class DictionaryInit(object):
               'glance': set([9191, 9292]),
               'cinder': set([3260, 8776])}
         return self.invert_dictionary_relationship(port_range)
+
+    def api_ports(self):
+        port_range = {'nova': set([8774]), 
+              'keystone': set([5000, 35357]), 
+              'swift': set([8080]), 
+              'glance': set([9292]),
+              'cinder': set([8776]),
+              'neutron': set([9696])}
+        return self.invert_dictionary_relationship(port_range)
+
+    def port_dictionary(self):
+        dict = self.api_ports()
+        for port in dict:
+            dict[port] = []
+        dict['etc'] = []
+        return dict
 
     def metering_dictionary(self):
         return {'etc' : 0, 'nova': 0, 'keystone': 0, 'swift': 0, 'glance': 0, 'cinder': 0}
