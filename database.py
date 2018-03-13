@@ -12,7 +12,6 @@ class DBSession(object):
             cursor.execute("PRAGMA cache_size = "+str(50*1024*1024))
 
     def wrap_access(self, func, *args, **kw):
-        self.create_conn()
         cursor = self.db.cursor()
         try:
             cursor.execute('BEGIN')

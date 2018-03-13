@@ -3,14 +3,14 @@ from scapy.all import sniff, Packet
 from database import DBSession
 
 class MonitoringModule(Thread):
-    def __init__(self, iface='lo', filter='tcp', action=None, db=DBSession()):
+    def __init__(self, iface='lo', filter='tcp', action=None, dbpath=':memory:'):
         Thread.__init__(self)
         self.stopped = Event()
         self.sniff_iface = iface
         self.sniff_filter = filter
         self.sniff_thread = None
         self.action = self.default_sniff_action if action is None else action
-        self.db = db
+        self.db = DBSession(dbpath)
 
     def default_sniff_action(self, packet):
         return
@@ -21,7 +21,6 @@ class MonitoringModule(Thread):
 
     def stop_execution(self):
         self.stopped.set()
-
 
 class DictionaryInit(object):
     def __init__(self):

@@ -26,7 +26,6 @@ class ApiLogging(MonitoringModule):
             self.api_buffer[dport].append(packet[Raw].load)
 
     def computate_and_persist(self):
-        
         return
     
     def classify_port(self, port):

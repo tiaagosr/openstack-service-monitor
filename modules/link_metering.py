@@ -4,15 +4,14 @@ from modules.definitions import MonitoringModule, DictionaryInit
 
 
 class LinkMetering(MonitoringModule):
-    def __init__(self, db, iface='wlp2s0', filter='tcp', interval=10):
-        super().__init__(iface, filter, self.measure_packet, db)
+    def __init__(self, dbpath, iface='wlp2s0', filter='tcp', interval=10):
+        super().__init__(iface, filter, self.measure_packet, dbpath)
         self.aux_thread_interval = interval
         self.ignored_count = 0
         self.metering_buffer = {}
         self.dict = DictionaryInit()
         self.metering_result = self.dict.metering_dictionary()
         self.port_mapping = self.dict.metering_ports()
-        self.init_persistance()
     
     def measure_packet(self, packet):
         if TCP in packet:
@@ -48,6 +47,7 @@ class LinkMetering(MonitoringModule):
         
 
     def run(self):
+        self.init_persistance()
         while not self.stopped.wait(self.aux_thread_interval):
             self.calculate_and_persist()
     
@@ -65,10 +65,11 @@ class LinkMetering(MonitoringModule):
         cursor.execute('''CREATE TABLE IF NOT EXISTS link_usage(id INTEGER PRIMARY KEY, interface VARCHAR(40), m_etc INTEGER, m_nova INTEGER, m_keystone INTEGER, m_glance INTEGER, m_cinder INTEGER, m_swift INTEGER, ignored_count INTEGER, time DATE DEFAULT (DATETIME(CURRENT_TIMESTAMP, 'LOCALTIME')) )''')
 
     def init_persistance(self):
+        self.db.create_conn()
         self.db.wrap_access(self._db_init_persistance)
 
     def _db_persist_result(self, cursor, result):
-        cursor.execute('''INSERT INTO link_usage (interface, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova m_swift) VALUES ("{iface}", "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{swift}")'''.format(iface=self.sniff_iface, ignored_count=str(self.ignored_count), **result))
+        cursor.execute('''INSERT INTO link_usage (interface, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_swift) VALUES ("{iface}", "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{swift}")'''.format(iface=self.sniff_iface, ignored_count=str(self.ignored_count), **result))
 
     def persist_metering_result(self, result={}):
         self.db.wrap_access(self._db_persist_result, result)
@@ -79,5 +80,3 @@ class LinkMetering(MonitoringModule):
     
     def print_results(self):
         self.db.wrap_access(self._db_print_results)
-    
-
