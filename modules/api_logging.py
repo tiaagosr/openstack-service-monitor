@@ -1,4 +1,5 @@
 from scapy.all import IP, Packet, sniff, TCP, IPv6
+from scapy_http.http import HTTP
 from threading import Thread, Timer, Event
 from modules.definitions import MonitoringModule, DictionaryInit
 
@@ -23,6 +24,8 @@ class ApiLogging(MonitoringModule):
         if packet.haslayer('HTTP') and packet.haslayer('Raw'):
             dport = self.classify_port(packet[TCP].dport)
             self.api_buffer[dport].append(packet[Raw].load)
+        
+        return packet.
 
     def computate_and_persist(self):
         for port in self.api_buffer:
