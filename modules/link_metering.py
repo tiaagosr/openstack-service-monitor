@@ -42,7 +42,7 @@ class LinkMetering(MonitoringModule):
         for port in buffer_copy:
             port_usage = buffer_copy[port] / self.aux_thread_interval
             service = self.classify_port(port)
-            self.metering_result[service] += port_usage
+            self.metering_result[service] += int(port_usage)
         return self.metering_result
         
 
