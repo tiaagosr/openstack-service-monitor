@@ -33,7 +33,7 @@ class LinkMetering(MonitoringModule):
         #reset values
         self.metering_result = self.dict.metering_dictionary()
         self.ignored_count = 0
-        self.print_results()
+        #self.print_results()
 
     def calculate_usage(self):
         #Shallow copy dict shared by threads
