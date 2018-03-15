@@ -16,7 +16,8 @@ class MonitoringModule(Thread):
         return
     
     def start_sniffing(self, args={}):
-        self.sniff_thread = Thread(target=sniff, kwargs={'iface':self.sniff_iface, 'prn':self.action, 'filter':self.sniff_filter, 'store':0, 'offline':'test/labp2dapi-data.pcap'}, **args)
+        self.sniff_thread = Thread(target=sniff, kwargs={'iface':self.sniff_iface, 'prn':self.action, 'filter':self.sniff_filter, 'store':0}, **args)
+        #'offline':'test/labp2dapi-data.pcap'
         self.sniff_thread.start()
 
     def stop_execution(self):
