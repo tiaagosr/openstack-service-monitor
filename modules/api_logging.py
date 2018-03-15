@@ -31,8 +31,7 @@ class ApiLogging(MonitoringModule):
         if packet.haslayer('HTTP') and packet.haslayer('Raw'):
             dport = packet[TCP].dport
             self.api_buffer[dport].append(packet[Raw].load)
-            print("added!")
-        return packet.show()
+        return
 
     def computate_and_persist(self):
         print(self.api_buffer)
