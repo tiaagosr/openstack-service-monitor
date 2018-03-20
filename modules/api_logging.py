@@ -1,5 +1,5 @@
 from scapy.all import IP, Packet, sniff, TCP, IPv6, bind_layers, Raw
-from scapy_http.http import HTTP
+from scapy_http.http import *
 from threading import Thread, Timer, Event
 from modules.definitions import MonitoringModule, DictionaryInit
 
@@ -19,18 +19,21 @@ class ApiLogging(MonitoringModule):
         for port in self.port_mapping:
             bind_layers(TCP, HTTP, sport=port)
             bind_layers(TCP, HTTP, dport=port)
+        bind_layers(TCP, HTTP, dport=443)
 
     def measure_packet(self, packet):
         if IP in packet:
-            IP_layer = IP
+            ip_layer = IP
         elif IPv6 in packet:
-            IP_layer = IPv6
+            ip_layer = IPv6
         else:
             return
 
         if packet.haslayer('Raw'):
-            dport = packet[TCP].dport
-            self.api_buffer[dport].append(packet[Raw].load)
+            dport = packet[ip_layer].dport
+            new_list = self.api_buffer.get(dport, [])
+            new_list.append(packet[Raw].load)
+            self.api_buffer[dport] = new_list
         return packet.show()
 
     def computate_and_persist(self):

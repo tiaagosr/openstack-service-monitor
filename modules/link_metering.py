@@ -62,14 +62,14 @@ class LinkMetering(MonitoringModule):
         self.start()
 
     def _db_init_persistance(self, cursor):
-        cursor.execute('''CREATE TABLE IF NOT EXISTS link_usage(id INTEGER PRIMARY KEY, interface VARCHAR(40), m_etc INTEGER, m_nova INTEGER, m_keystone INTEGER, m_glance INTEGER, m_cinder INTEGER, m_swift INTEGER, ignored_count INTEGER, time DATE DEFAULT (DATETIME(CURRENT_TIMESTAMP, 'LOCALTIME')) )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS link_usage(id INTEGER PRIMARY KEY, interface VARCHAR(40), m_etc INTEGER, m_nova INTEGER, m_keystone INTEGER, m_glance INTEGER, m_cinder INTEGER, m_swift INTEGER, m_ceph INTEGER, ignored_count INTEGER, time DATE DEFAULT (DATETIME(CURRENT_TIMESTAMP, 'LOCALTIME')) )''')
 
     def init_persistance(self):
         self.db.create_conn()
         self.db.wrap_access(self._db_init_persistance)
 
     def _db_persist_result(self, cursor, result):
-        cursor.execute('''INSERT INTO link_usage (interface, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_swift) VALUES ("{iface}", "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{swift}")'''.format(iface=self.sniff_iface, ignored_count=str(self.ignored_count), **result))
+        cursor.execute('''INSERT INTO link_usage (interface, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_swift, m_ceph) VALUES ("{iface}", "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{swift}", "{ceph}")'''.format(iface=self.sniff_iface, ignored_count=str(self.ignored_count), **result))
 
     def persist_metering_result(self, result={}):
         self.db.wrap_access(self._db_persist_result, result)
