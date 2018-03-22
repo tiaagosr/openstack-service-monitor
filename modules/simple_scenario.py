@@ -50,7 +50,7 @@ class ScenarioManager():
                 }
             }
 
-        neutron.create_network(network_request)
+        #neutron.create_network(network_request)
         networks = neutron.list_networks(name='local')
         network_id = networks['networks'][0]['id']
         nics = [{'net-id': network_id}]
@@ -64,10 +64,9 @@ class ScenarioManager():
                 "cidr": "192.168.0.0/24"
             }
         }
-        resp = neutron.create_subnet(subnet_request)
-        print(resp)
-
-        subnet_id = resp['subnet']['id']
+        #resp = neutron.create_subnet(subnet_request)
+        #print(resp)
+        #subnet_id = resp['subnet']['id']
         
         image_mapping = {x['name']:x['id'] for x in images}
         if image in image_mapping:
