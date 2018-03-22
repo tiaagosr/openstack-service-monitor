@@ -43,7 +43,8 @@ class ScenarioManager():
         images = list(glance.images.list())
 
         neutron.create_network({'network': {'name': 'mynetwork', 'admin_state_up': True}})
-        networks = neutron.list_networks(name='mynetwork')[0]
+        networks = neutron.list_networks(name='mynetwork')
+        print(networks)
         
         image_mapping = {x['name']:x['id'] for x in images}
         if image in image_mapping:
