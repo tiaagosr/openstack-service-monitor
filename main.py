@@ -1,8 +1,8 @@
 import imports
-from modules.link_metering import LinkMetering
-from modules.api_logging import ApiLogging
-from modules.plotting import DataPlotting
-from modules.simple_scenario import SimpleScenario
+#from modules.link_metering import LinkMetering
+#from modules.api_logging import ApiLogging
+#from modules.plotting import DataPlotting
+from modules.simple_scenario import ScenarioManager
 #from database import DBSession
 #wlp2s0
 #'enp0s20u3'
@@ -20,4 +20,4 @@ db_file = 'file.db'
 #plot.gen_link_metering_plot()
 #plot.uncategorized_metering_plot()
 
-SimpleScenario().authenticate()
+ScenarioManager().get_available_configs()

@@ -1,34 +1,54 @@
 import time, os, sys
-import inspect
 from os import environ as env
-from novaclient import client
-import keystoneclient.v3.client as ksclient
-from keystoneauth1 import loading, session
+from keystoneauth1.identity import v3
+from keystoneauth1 import session
+from keystoneclient.v3 import client as kc
+from glanceclient import Client as glanceclient
+from neutronclient.v2_0 import client as neutronclient
+from novaclient import client as novaclient
 #from definitions import MonitoringModule
 
-class SimpleScenario():
+class ScenarioManager():
 
     def __init__(self, flavor="m1.small", image="trusty-server"):
-        self.flavor = flavor
-        self.image = image
-        self.private_net = "local"
+        self.flavor = None #"m1.small"
+        self.image = None #"trusty-server"
+        self.private_net = None #"local"
         self.floating_ip_pool_name = None
         self.floating_ip = None
+        self.session = None
 
     def authenticate(self):
-        loader = loading.get_plugin_loader('password')
-        auth = loader.load_from_options(auth_url=env['OS_AUTH_URL'],
-                                        username=env['OS_USERNAME'],
-                                        password=env['OS_PASSWORD'],
-                                        project_name=env['OS_PROJECT_NAME'],
-                                        user_domain_name=env['OS_USER_DOMAIN_NAME'],
-                                        project_domain_name=env['OS_PROJECT_DOMAIN_NAME'])
+        if self.session is None:
+            auth = v3.Password(auth_url=env['OS_AUTH_URL'], username=env['OS_USERNAME'], password=env['OS_PASSWORD'], project_name=env['OS_PROJECT_NAME'], user_domain_name=env['OS_USER_DOMAIN_NAME'], project_domain_name=env['OS_PROJECT_DOMAIN_NAME'])        
+            self.session = session.Session(auth=auth)
+        return self.session
 
-        sess = session.Session(auth=auth)
-        nova = client.Client('2.1', session=sess)
+    def get_available_configs(self):
+        confs = {
+            'flavors': [],
+            'images': [],
+            'networks': [],
+            }
+
+        session = self.authenticate()
+
+        nova = novaclient.Client('2.1', session=session)
+        glance = glanceclient('2', session=session)
+        neutron = neutronclient(session=session)
+
+        confs['flavors'] = nova.flavors.list()
+        confs['images'] = glance.images.list()
+        confs['networks'] = neutron.list_networks()
+        print(confs)
+
+        return confs
+
+        '''
         print(nova.servers.list())
         print(nova.flavors.list())
-        '''
+        print(nova.images.list())
+        
         print("user authorization completed.")
 
         image = nova.images.find(name=self.image)
@@ -49,7 +69,7 @@ class SimpleScenario():
             floating_ip = nova.floating_ips.create(self.floating_ip_pool_name)
         else: 
             sys.exit("public ip pool name not defined.")
-
+        nova.servers.create(name="vm1", image="trusty-server", flavor="m1.small", nics="local", security_groups="default")
         print("Creating instance ... ")
         instance = nova.servers.create(name="vm1", image=image, flavor=flavor, nics=nics, security_groups=secgroups)
         inst_status = instance.status
