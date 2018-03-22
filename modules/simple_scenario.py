@@ -50,7 +50,7 @@ class ScenarioManager():
                 }
             }
 
-        neutron.create_network(network_request)
+        #neutron.create_network(network_request)
         networks = neutron.list_networks(name='mynetwork')
         network_id = networks['networks'][0]['id']
         nics = [{'net-id': network_id}]
@@ -63,7 +63,8 @@ class ScenarioManager():
                 "cidr": "192.168.0.0/24"
             }
         }
-        neutron.create_subnet(subnet_request)
+        resp = neutron.create_subnet(subnet_request)
+        print(resp)
 
         print(networks)
         
