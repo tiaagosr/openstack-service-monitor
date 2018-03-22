@@ -42,10 +42,29 @@ class ScenarioManager():
         flavor_result = nova.flavors.find(name=flavor)
         images = list(glance.images.list())
 
-        neutron.create_network({'network': {'name': 'mynetwork', 'admin_state_up': True}})
+        #https://developer.openstack.org/api-ref/network/v2/#create-network
+        network_request = {
+            'network': {
+                'name': 'mynetwork', 
+                'admin_state_up': True
+                }
+            }
+
+        neutron.create_network(network_request)
         networks = neutron.list_networks(name='mynetwork')
         network_id = networks['networks'][0]['id']
         nics = [{'net-id': network_id}]
+
+        #https://developer.openstack.org/api-ref/network/v2/#create-subnet
+        subnet_request = {
+            "subnet": {
+                "network_id": network_id,
+                "ip_version": 4,
+                "cidr": "192.168.0.0/24"
+            }
+        }
+        neutron.create_subnet(subnet_request)
+
         print(networks)
         
         image_mapping = {x['name']:x['id'] for x in images}
