@@ -42,7 +42,7 @@ class ScenarioManager():
         flavor_result = nova.flavors.find(name=flavor)
         images = list(glance.images.list())
 
-        neutron.create_network({'network':'mynetwork'})
+        neutron.create_network({'network': {'name': 'mynetwork', 'admin_state_up': True}})
         networks = neutron.list_networks(name='mynetwork')[0]
         
         image_mapping = {x['name']:x['id'] for x in images}
