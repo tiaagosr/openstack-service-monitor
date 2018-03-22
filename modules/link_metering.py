@@ -1,6 +1,7 @@
 from scapy.all import IP, Packet, sniff, TCP
 from threading import Thread, Timer, Event
 from modules.definitions import MonitoringModule, DictionaryInit
+import json
 
 
 class LinkMetering(MonitoringModule):
@@ -15,9 +16,9 @@ class LinkMetering(MonitoringModule):
     
     def measure_packet(self, packet):
         if TCP in packet:
-            d_port = packet[TCP].dport
-            port_sum = self.metering_buffer.get(d_port, 0)
-            self.metering_buffer[d_port] = packet[IP].len + port_sum
+            port = self.packet_port(packet, self.port_mapping)
+            port_sum = self.metering_buffer.get(port, 0)
+            self.metering_buffer[port] = packet[IP].len + port_sum
         #Packet without TCP Layer (subsequently, without destination port)
         elif IP in packet: 
             self.metering_result['etc'] += packet[IP].len
@@ -40,12 +41,19 @@ class LinkMetering(MonitoringModule):
         buffer_copy = dict(self.metering_buffer)
         self.metering_buffer = {}
         for port in buffer_copy:
-            port_usage = buffer_copy[port] / self.aux_thread_interval
+            port_usage = round(buffer_copy[port] / self.aux_thread_interval)
             service = self.classify_port(port)
-            self.metering_result[service] += int(port_usage)
+            #uncategorized port
+            if service == 'etc' and not self.is_ephemeral_port(port):
+                self.metering_result['etc_ports'][port] = port_usage
+            self.metering_result[service] += port_usage
         return self.metering_result
-        
 
+    def is_ephemeral_port(self, port):
+        if port != 35357 and port >= 32768 and port <= 60999:
+            return True
+        return False
+        
     def run(self):
         self.init_persistance()
         while not self.stopped.wait(self.aux_thread_interval):
@@ -62,16 +70,20 @@ class LinkMetering(MonitoringModule):
         self.start()
 
     def _db_init_persistance(self, cursor):
-        cursor.execute('''CREATE TABLE IF NOT EXISTS link_usage(id INTEGER PRIMARY KEY, interface VARCHAR(40), m_etc INTEGER, m_nova INTEGER, m_keystone INTEGER, m_glance INTEGER, m_cinder INTEGER, m_swift INTEGER, m_ceph INTEGER, ignored_count INTEGER, time DATE DEFAULT (DATETIME(CURRENT_TIMESTAMP, 'LOCALTIME')) )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS link_usage(id INTEGER PRIMARY KEY, interface VARCHAR(40), m_etc INTEGER, m_nova INTEGER, m_keystone INTEGER, m_glance INTEGER, m_cinder INTEGER, m_swift INTEGER, m_ceph INTEGER, etc_ports TEXT, ignored_count INTEGER, time DATE DEFAULT (DATETIME(CURRENT_TIMESTAMP, 'LOCALTIME')) )''')
 
     def init_persistance(self):
         self.db.create_conn()
         self.db.wrap_access(self._db_init_persistance)
 
     def _db_persist_result(self, cursor, result):
-        cursor.execute('''INSERT INTO link_usage (interface, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_swift, m_ceph) VALUES ("{iface}", "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{swift}", "{ceph}")'''.format(iface=self.sniff_iface, ignored_count=str(self.ignored_count), **result))
+        cursor.execute('''INSERT INTO link_usage (interface, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_swift, m_ceph, etc_ports) VALUES ("{iface}", "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{swift}", "{ceph}", "{etc_ports}")'''.format(iface=self.sniff_iface, ignored_count=str(self.ignored_count), **result))
 
     def persist_metering_result(self, result={}):
+        if 'etc_ports' in result:
+            top_ports = list((a, int(x)) for a, x in result['etc_ports'].items())[:10]
+            sorted_top_ports = sorted(top_ports, key=lambda x:x[1])
+            result['etc_ports'] = json.dumps(sorted_top_ports)
         self.db.wrap_access(self._db_persist_result, result)
 
     def _db_print_results(self, cursor):

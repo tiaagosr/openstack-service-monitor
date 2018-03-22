@@ -5,7 +5,7 @@ from modules.definitions import MonitoringModule, DictionaryInit
 
 class ApiLogging(MonitoringModule):
 
-    def __init__(self, dbpath, iface='wlp2s0', filter='tcp and (dst port 8774 or dst port 5000 or dst port 35357 or dst port 8080 or dst port 9292 or dst port 8776 or dst port 9696)', interval=10):
+    def __init__(self, dbpath, iface='wlp2s0', filter='tcp and (port 8774 or port 5000 or port 35357 or port 8080 or port 9292 or port 8776 or port 9696)', interval=10):
         super().__init__(iface, filter, self.measure_packet, dbpath)
         self.aux_thread_interval = interval
         self.dict = DictionaryInit()
@@ -19,22 +19,11 @@ class ApiLogging(MonitoringModule):
         for port in self.port_mapping:
             bind_layers(TCP, HTTP, sport=port)
             bind_layers(TCP, HTTP, dport=port)
-        bind_layers(TCP, HTTP, dport=443)
 
     def measure_packet(self, packet):
-        if IP in packet:
-            ip_layer = IP
-        elif IPv6 in packet:
-            ip_layer = IPv6
-        else:
-            return
-
         if packet.haslayer('Raw'):
-            dport = packet[ip_layer].dport
-            new_list = self.api_buffer.get(dport, [])
-            new_list.append(packet[Raw].load)
-            self.api_buffer[dport] = new_list
-        return packet.show()
+            port = self.packet_port(packet, self.port_mapping)
+            self.api_buffer[port].append(packet[Raw].load)
 
     def computate_and_persist(self):
         print(self.api_buffer)
@@ -42,7 +31,7 @@ class ApiLogging(MonitoringModule):
             tmp_list = list(self.api_buffer[port])
             self.api_buffer[port] = []
             for entry in tmp_list:
-                print("Destiny: "+port)
+                print("Destiny: "+str(port))
     
     def classify_port(self, port):
         if port in self.port_mapping:
