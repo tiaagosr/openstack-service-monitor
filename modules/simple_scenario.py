@@ -64,7 +64,7 @@ class ScenarioManager():
             }
         }
         resp = neutron.create_subnet(subnet_request)
-        print(resp)
+        print("Resposta: "+resp)
 
         print(networks)
         
@@ -72,11 +72,10 @@ class ScenarioManager():
         if image in image_mapping:
             confs['image'] = image_mapping[image]
         confs['flavor'] = flavor_result
-        print(confs)
 
-        instance = nova.servers.create('vm1', confs['image'], confs['flavor'], nics=nics)
-        inst_status = instance.status
-        print(inst_status)
+        #instance = nova.servers.create('vm1', confs['image'], confs['flavor'], nics=nics)
+        #inst_status = instance.status
+        #print(inst_status)
         return confs
 
         '''
