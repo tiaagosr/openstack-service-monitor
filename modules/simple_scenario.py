@@ -53,7 +53,7 @@ class ScenarioManager():
         confs['flavor'] = flavor_result
         print(confs)
 
-        instance = nova.servers.create('vm1', confs['image'], confs['flavor'])
+        instance = nova.servers.create('vm1', confs['image'], confs['flavor'], nics=None)
         inst_status = instance.status
         print(inst_status)
         return confs
