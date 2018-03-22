@@ -38,12 +38,18 @@ class ScenarioManager():
         glance = glanceclient('2', session=session)
         neutron = neutronclient.Client(session=session)
 
-        confs['flavors'] = nova.flavors.list(detailed=False)
-        confs['images'] = glance.images.list()
-        #confs['networks'] = neutron.list_networks()
+        flavor_result = nova.flavors.find(name=flavor)
+        images = list(glance.images.list())
+        
+        image_mapping = {x['name']:x['id'] for x in images}
+        if image in image_mapping:
+            confs['image'] = image_mapping[image]
+        confs['flavor'] = flavor_result
         print(confs)
 
         return confs
+
+    def contains_image(self, image):
 
     def config_new_instance(self):
 
