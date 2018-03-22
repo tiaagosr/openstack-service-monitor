@@ -49,13 +49,6 @@ class ScenarioManager():
 
         return confs
 
-    def contains_image(self, image):
-
-    def config_new_instance(self):
-
-    
-
-
         '''
         print(nova.servers.list())
         print(nova.flavors.list())
