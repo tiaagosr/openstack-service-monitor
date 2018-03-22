@@ -3,7 +3,6 @@ from threading import Thread, Timer, Event
 from modules.definitions import MonitoringModule, DictionaryInit
 import json
 
-
 class LinkMetering(MonitoringModule):
     def __init__(self, dbpath, iface='wlp2s0', filter='tcp', interval=10):
         super().__init__(iface, filter, self.measure_packet, dbpath)

@@ -53,7 +53,7 @@ class DictionaryInit(object):
     def api_ports(self):
         port_range = {'nova': set([8774]), 
               'keystone': set([5000, 35357]), 
-              'swift': set([8080]), 
+              'swift': set([8080]),
               'glance': set([9292]),
               'cinder': set([8776]),
               'neutron': set([9696]),

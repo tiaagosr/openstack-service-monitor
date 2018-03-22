@@ -17,7 +17,7 @@ db_file = 'file.db'
 #link_metering.start_monitoring()
 
 #plot = DataPlotting('traffic_etc.db')
-#plot.gen_link_metering_plot()
+#plot.categorized_metering_plot()
 #plot.uncategorized_metering_plot()
 
 ScenarioManager()
