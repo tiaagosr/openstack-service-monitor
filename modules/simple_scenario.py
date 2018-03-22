@@ -45,19 +45,20 @@ class ScenarioManager():
         #https://developer.openstack.org/api-ref/network/v2/#create-network
         network_request = {
             'network': {
-                'name': 'mynetwork', 
+                'name': 'local', 
                 'admin_state_up': True
                 }
             }
 
-        #neutron.create_network(network_request)
-        networks = neutron.list_networks(name='mynetwork')
+        neutron.create_network(network_request)
+        networks = neutron.list_networks(name='local')
         network_id = networks['networks'][0]['id']
         nics = [{'net-id': network_id}]
 
         #https://developer.openstack.org/api-ref/network/v2/#create-subnet
         subnet_request = {
             "subnet": {
+                "name": "Subnet1",
                 "network_id": network_id,
                 "ip_version": 4,
                 "cidr": "192.168.0.0/24"
@@ -65,8 +66,6 @@ class ScenarioManager():
         }
         resp = neutron.create_subnet(subnet_request)
         print(resp)
-
-        #print(networks)
         
         image_mapping = {x['name']:x['id'] for x in images}
         if image in image_mapping:
