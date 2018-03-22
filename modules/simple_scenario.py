@@ -18,17 +18,18 @@ class ScenarioManager():
         self.floating_ip = None
         self.session = None
 
+        self.get_available_configs(image, flavor)
+
     def authenticate(self):
         if self.session is None:
             auth = v3.Password(auth_url=env['OS_AUTH_URL'], username=env['OS_USERNAME'], password=env['OS_PASSWORD'], project_name=env['OS_PROJECT_NAME'], user_domain_name=env['OS_USER_DOMAIN_NAME'], project_domain_name=env['OS_PROJECT_DOMAIN_NAME'])        
             self.session = session.Session(auth=auth)
         return self.session
 
-    def get_available_configs(self):
+    def get_available_configs(self, image='', flavor=''):
         confs = {
-            'flavors': [],
-            'images': [],
-            'networks': [],
+            'flavor': '',
+            'image': '',
             }
 
         session = self.authenticate()
@@ -37,12 +38,17 @@ class ScenarioManager():
         glance = glanceclient('2', session=session)
         neutron = neutronclient(session=session)
 
-        confs['flavors'] = nova.flavors.list()
-        confs['images'] = glance.images.list()
-        confs['networks'] = neutron.list_networks()
+        confs['flavors'] = nova.flavors.find(flavor)
+        confs['images'] = glance.images.find(image)
+        #confs['networks'] = neutron.list_networks()
         print(confs)
 
         return confs
+
+    def config_new_instance(self):
+
+    
+
 
         '''
         print(nova.servers.list())

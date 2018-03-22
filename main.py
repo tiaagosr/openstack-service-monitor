@@ -20,4 +20,4 @@ db_file = 'file.db'
 #plot.gen_link_metering_plot()
 #plot.uncategorized_metering_plot()
 
-ScenarioManager().get_available_configs()
+ScenarioManager()
