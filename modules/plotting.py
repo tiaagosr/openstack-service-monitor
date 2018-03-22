@@ -73,7 +73,7 @@ class DataPlotting():
         ax.get_xaxis().tick_bottom()
         ax.get_yaxis().tick_left()
 
-        cy = cycler('color', ['red', 'green', 'blue', 'yellow', 'orange', 'purple'])
+        cy = cycler('color', ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'turquoise', 'brown', 'grey', 'cyan'])
         ax.set_prop_cycle(cy)
 
         plt.grid(True, 'major', 'y', ls='--', lw=.5, c='k', alpha=.3)
