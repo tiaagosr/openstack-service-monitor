@@ -44,15 +44,18 @@ class DataPlotting():
         }
 
         if db_ports_data is not None:
-            etc_ports = json.loads(db_ports_data['etc_ports'])
+            etc_ports = json.loads(db_ports_data[0])
             for port in etc_ports:
-                plot_value[port] = []
+                plot_value[port[0]] = []
 
         for row in db_data:
-            etc_port_metering = json.loads(row[1])
-            for port in (x for x in etc_port_metering if x in plot_value):
-                plot_value[port].append(etc_port_metering[port])
-            for port in (x for x in plot_value if x not in etc_port_metering):
+            etc_port_tuples = json.loads(row[1])
+            plotted_port_tuples = [x for x in etc_port_tuples if x[0] in plot_value]
+            ports_index = list(map(lambda x:x[0], etc_port_tuples))
+            not_plotted_port_tuples = [x for x in plot_value if x not in ports_index and x != 'y']
+            for port in plotted_port_tuples:
+                plot_value[port[0]].append(port[1])
+            for port in not_plotted_port_tuples:
                 plot_value[port].append(0)
 
             plot_value['y'].append(datetime.strptime(row[2], self.date_format))
@@ -93,10 +96,12 @@ class DataPlotting():
         self.format_plot()
 
         port_list = [x for x in plot_data if x != 'y']
-        for port in port_list:
-            plt.plot(plot_data['y'], plot_data[port], label=port)
+        tcp_port_list = list(map(lambda x:'TCP port '+str(x), port_list))
 
-        plt.legend(port_list, loc='upper left')
+        for port in port_list:
+            plt.plot(plot_data['y'], plot_data[port], label='TCP port '+str(port))
+
+        plt.legend(tcp_port_list, loc='upper left')
         plt.show()
 
 

@@ -15,5 +15,6 @@ db_file = 'file.db'
 #link_metering = LinkMetering(iface=current_interface, dbpath=db_file, interval=5)
 #link_metering.start_monitoring()
 
-#plot = DataPlotting('traffic.db')
+plot = DataPlotting('traffic_etc.db')
 #plot.gen_link_metering_plot()
+plot.uncategorized_metering_plot()

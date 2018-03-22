@@ -1,16 +1,20 @@
 import time, os, sys
 import inspect
 from os import environ as env
-from  novaclient import client
+from novaclient import client
 import keystoneclient.v3.client as ksclient
-from keystoneauth1 import loading
-from keystoneauth1 import session
+from keystoneauth1 import loading, session
+from definitions import MonitoringModule
 
+class SimpleScenario(MonitoringModule):
 
-flavor = "m1.small" 
-private_net = None
-floating_ip_pool_name = None
-floating_ip = None
+    def __init__(self, flavor="m1.small", image="ubuntu 14.04"):
+        self.flavor = flavor
+        self.image = image
+        self.private_net = None
+        self.floating_ip_pool_name = None
+        self.floating_ip = None
+
 
 loader = loading.get_plugin_loader('password')
 auth = loader.load_from_options(auth_url=env['OS_AUTH_URL'],
