@@ -30,6 +30,7 @@ class ScenarioManager():
         confs = {
             'flavor': '',
             'image': '',
+            'name':'vm1'
             }
 
         session = self.authenticate()
@@ -47,6 +48,9 @@ class ScenarioManager():
         confs['flavor'] = flavor_result
         print(confs)
 
+        instance = nova.servers.create(name="vm1", confs)
+        inst_status = instance.status
+        print(inst_status)
         return confs
 
         '''
