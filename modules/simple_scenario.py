@@ -64,9 +64,9 @@ class ScenarioManager():
             }
         }
         resp = neutron.create_subnet(subnet_request)
-        print("Resposta: "+resp)
+        print(resp)
 
-        print(networks)
+        #print(networks)
         
         image_mapping = {x['name']:x['id'] for x in images}
         if image in image_mapping:
