@@ -45,6 +45,7 @@ class ScenarioManager():
         neutron.create_network({'network': {'name': 'mynetwork', 'admin_state_up': True}})
         networks = neutron.list_networks(name='mynetwork')
         network_id = networks['networks'][0]['id']
+        nics = [{'net-id': network_id}]
         print(networks)
         
         image_mapping = {x['name']:x['id'] for x in images}
@@ -53,7 +54,7 @@ class ScenarioManager():
         confs['flavor'] = flavor_result
         print(confs)
 
-        instance = nova.servers.create('vm1', confs['image'], confs['flavor'], nics={'none'})
+        instance = nova.servers.create('vm1', confs['image'], confs['flavor'], nics=nics)
         inst_status = instance.status
         print(inst_status)
         return confs
