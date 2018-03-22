@@ -36,7 +36,7 @@ class ScenarioManager():
 
         nova = novaclient.Client('2.1', session=session)
         glance = glanceclient('2', session=session)
-        neutron = neutronclient(session=session)
+        neutron = neutronclient.Client(session=session)
 
         confs['flavors'] = nova.flavors.find(flavor)
         confs['images'] = glance.images.find(image)
