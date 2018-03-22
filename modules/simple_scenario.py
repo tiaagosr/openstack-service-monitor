@@ -41,6 +41,9 @@ class ScenarioManager():
 
         flavor_result = nova.flavors.find(name=flavor)
         images = list(glance.images.list())
+
+        neutron.create_network({'network':'mynetwork'})
+        networks = neutron.list_networks(name='mynetwork')[0]
         
         image_mapping = {x['name']:x['id'] for x in images}
         if image in image_mapping:
@@ -48,7 +51,7 @@ class ScenarioManager():
         confs['flavor'] = flavor_result
         print(confs)
 
-        instance = nova.servers.create('vm1', confs['image'], confs['flavor'])
+        instance = nova.servers.create('vm1', confs['image'], confs['flavor'], networks)
         inst_status = instance.status
         print(inst_status)
         return confs
