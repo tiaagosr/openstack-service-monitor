@@ -4,9 +4,9 @@ from os import environ as env
 from novaclient import client
 import keystoneclient.v3.client as ksclient
 from keystoneauth1 import loading, session
-from definitions import MonitoringModule
+#from definitions import MonitoringModule
 
-class SimpleScenario(MonitoringModule):
+class SimpleScenario():
 
     def __init__(self, flavor="m1.small", image="trusty-server"):
         self.flavor = flavor
@@ -26,6 +26,9 @@ class SimpleScenario(MonitoringModule):
 
         sess = session.Session(auth=auth)
         nova = client.Client('2.1', session=sess)
+        print(nova.servers.list())
+        print(nova.flavors.list())
+        '''
         print("user authorization completed.")
 
         image = nova.images.find(name=self.image)
@@ -66,3 +69,4 @@ class SimpleScenario(MonitoringModule):
             print("Instance booted! Name: " + instance.name + " Status: " +instance.status+ ", No floating IP attached")
         else:
             print("Instance booted! Name: " + instance.name + " Status: " +instance.status+ ", Floating IP: " + floating_ip.ip)
+'''
