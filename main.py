@@ -22,6 +22,4 @@ if __name__ == '__main__':
     #plot.uncategorized_metering_plot()
 
     scenario = ScenarioManager()
-    vm = scenario.vm_create()
-    scenario.vm_set_state(vm, 'suspend')
-    print(scenario.get_vm_status(vm))
+    scenario.test_scenario(2, ['suspend', 'resume', 'stop'])

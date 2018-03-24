@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 from cycler import cycler
-import numpy as np
 from datetime import datetime
 from database import DBSession
 import json
@@ -12,8 +11,8 @@ class DataPlotting():
         self.date_format = '%Y-%m-%d %H:%M:%S'
         self.services = ['cinder', 'glance', 'keystone', 'nova', 'swift']
     
-    def get_services_db_data(self):
-        db_data = self.db.wrap_access(self._db_categorized_metering_data)
+    def get_service_data(self):
+        db_data = self.db.wrap_access(self._db_service_data)
         plot_value = {
             'y': [],
             'cinder': [],
@@ -35,16 +34,16 @@ class DataPlotting():
 
         return plot_value
 
-    def get_etc_ports_db_data(self):
-        db_data = self.db.wrap_access(self._db_uncategorized_metering_data)
-        db_ports_data = self.db.wrap_access(self._db_uncategorized_first_result)
+    def get_etc_port_data(self):
+        db_data = self.db.wrap_access(self._db_etc_port_data)
+        db_port_list = self.db.wrap_access(self._db_etc_port_list)
 
         plot_value = {
             'y': [],
         }
 
-        if db_ports_data is not None:
-            etc_ports = json.loads(db_ports_data[0])
+        if db_port_list is not None:
+            etc_ports = json.loads(db_port_list[0])
             for port in etc_ports:
                 plot_value[port[0]] = []
 
@@ -81,7 +80,7 @@ class DataPlotting():
         return fig, ax
 
     def categorized_metering_plot(self):
-        plot_data = self.get_services_db_data()
+        plot_data = self.get_service_data()
         self.format_plot()
 
         service_list = [x for x in plot_data if x != 'y']
@@ -92,7 +91,7 @@ class DataPlotting():
         plt.show()
 
     def uncategorized_metering_plot(self):
-        plot_data = self.get_etc_ports_db_data()
+        plot_data = self.get_etc_port_data()
         self.format_plot()
 
         port_list = [x for x in plot_data if x != 'y']
@@ -104,15 +103,17 @@ class DataPlotting():
         plt.legend(tcp_port_list, loc='upper left')
         plt.show()
 
+    def 
 
-    def _db_categorized_metering_data(self, cursor):
+
+    def _db_service_data(self, cursor):
         cursor.execute('SELECT m_cinder, m_etc, m_glance, m_keystone, m_nova, m_swift, time FROM link_usage ORDER BY id')
         return cursor.fetchall()
 
-    def _db_uncategorized_metering_data(self, cursor):
+    def _db_etc_port_data(self, cursor):
         cursor.execute('SELECT m_etc, etc_ports, time FROM link_usage ORDER BY id')
         return cursor.fetchall()
 
-    def _db_uncategorized_first_result(self, cursor):
+    def _db_etc_port_list(self, cursor):
         cursor.execute('SELECT etc_ports FROM link_usage ORDER BY id')
         return cursor.fetchone()
