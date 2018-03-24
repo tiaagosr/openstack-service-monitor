@@ -64,7 +64,7 @@ class ScenarioManager():
         if flavor is None:
             flavor = self.flavor
         if name is None:
-            name = "vm"+self.count
+            name = "vm"+str(self.count)
             self.count += 1
         session = self.authenticate()
 
