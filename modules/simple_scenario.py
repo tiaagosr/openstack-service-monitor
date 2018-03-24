@@ -52,6 +52,7 @@ class ScenarioManager():
         return self.nics
 
     def get_vm_status(self, name):
+        session = self.authenticate()
         nova = novaclient.Client('2.1', session=session)
         response = nova.servers.list(search_opts={'uuid': self.vms[name]})
         print('Server '+name+': '+response[0]['status'])
