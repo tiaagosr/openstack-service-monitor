@@ -54,8 +54,8 @@ class ScenarioManager():
     def get_vm_status(self, name):
         nova = novaclient.Client('2.1', session=session)
         response = nova.servers.list(search_opts={'uuid': self.vms[name]})
-        print('Server '+name+': '+response['servers'][0]['status'])
-        return response['servers'][0]['status']
+        print('Server '+name+': '+response[0]['status'])
+        return response[0]['status']
 
     def vm_create(self, image=None, flavor=None, name=None):
         if image is None:
@@ -79,7 +79,6 @@ class ScenarioManager():
         vm_image = image_mapping[image]
 
         instance = nova.servers.create(name, vm_image, vm_flavor, nics=nics)
-        print(instance.id)
         self.vms[name]  = instance.id
         return name
 
@@ -88,11 +87,11 @@ class ScenarioManager():
 
         #https://docs.openstack.org/nova/latest/reference/vm-states.html
         state_dict = {
-            'suspend' : {'condition': ['Active', 'Shutoff'], 'function': nova.servers.suspend},
-            'resume' : {'condition': ['Suspended'], 'function': nova.servers.resume},
-            'reboot' : {'condition': ['Active', 'Shutoff', 'Rescued'], 'function': nova.servers.reboot},
-            'shelve' : {'condition': ['Active', 'Shutoff', 'Suspended'], 'function': nova.servers.shelve},
-            'stop' : {'condition': ['Active', 'Shutoff', 'Rescued'], 'function': nova.servers.stop}
+            'suspend' : {'condition': ['ACTIVE', 'SHUTOFF'], 'function': nova.servers.suspend},
+            'resume' : {'condition': ['SUSPENDED'], 'function': nova.servers.resume},
+            'reboot' : {'condition': ['ACTIVE', 'SHUTOFF', 'RESCUED'], 'function': nova.servers.reboot},
+            'shelve' : {'condition': ['ACTIVE', 'SHUTOFF', 'SUSPENDED'], 'function': nova.servers.shelve},
+            'stop' : {'condition': ['ACTIVE', 'SHUTOFF', 'RESCUED'], 'function': nova.servers.stop}
         }
     
         if name in self.vms and state in state_dict and self.get_vm_status(name) in state_dict[state]['condition']:
