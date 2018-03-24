@@ -10,14 +10,18 @@ from modules.simple_scenario import ScenarioManager
 current_interface = 'wlp2s0'
 db_file = 'file.db'
 
-#api_logging = ApiLogging(iface=current_interface, dbpath=':memory:', interval=5)
-#api_logging.start_monitoring()
+if __name__ == '__main__':
+    #api_logging = ApiLogging(iface=current_interface, dbpath=':memory:', interval=5)
+    #api_logging.start_monitoring()
 
-#link_metering = LinkMetering(iface=current_interface, dbpath=db_file, interval=5)
-#link_metering.start_monitoring()
+    #link_metering = LinkMetering(iface=current_interface, dbpath=db_file, interval=5)
+    #link_metering.start_monitoring()
 
-#plot = DataPlotting('traffic_etc.db')
-#plot.categorized_metering_plot()
-#plot.uncategorized_metering_plot()
+    #plot = DataPlotting('traffic_etc.db')
+    #plot.categorized_metering_plot()
+    #plot.uncategorized_metering_plot()
 
-ScenarioManager()
+    scenario = ScenarioManager()
+    vm = scenario.vm_create()
+    scenario.vm_set_state(vm, 'suspend')
+
