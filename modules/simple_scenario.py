@@ -55,8 +55,8 @@ class ScenarioManager():
         session = self.authenticate()
         nova = novaclient.Client('2.1', session=session)
         response = nova.servers.list(search_opts={'uuid': self.vms[name]})
-        print('Server '+name+': '+response[0]['status'])
-        return response[0]['status']
+        print('Server '+name+': '+response[0].status)
+        return response[0].status
 
     def vm_create(self, image=None, flavor=None, name=None):
         if image is None:
