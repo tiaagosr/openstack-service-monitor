@@ -80,7 +80,8 @@ class ScenarioManager():
         vm_image = image_mapping[image]
 
         instance = nova.servers.create(name, vm_image, vm_flavor, nics=nics)
-        self.vms['name']  = instance['server']['id']
+        print(instance)
+        self.vms['name']  = instance['id']
         return name
 
     def vm_set_state(self, name, state):
