@@ -37,7 +37,7 @@ class ScenarioManager():
                 }
 
             response = neutron.create_network(network_request)
-            network_id = response['networks'][0]['id']
+            network_id = response['network']['id']
             self.nics = [{'net-id': network_id}]
 
             #https://developer.openstack.org/api-ref/network/v2/#create-subnet
