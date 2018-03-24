@@ -26,7 +26,7 @@ class ScenarioManager():
 
     def network_cfg(self):
         if self.nics is None:
-            session = self.authenticate
+            session = self.authenticate()
             neutron = neutronclient.Client(session=session)
             #https://developer.openstack.org/api-ref/network/v2/#create-network
             network_request = {
