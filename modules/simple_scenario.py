@@ -2,7 +2,6 @@ import time, os, sys
 from os import environ as env
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
-from keystoneclient.v3 import client as kc
 from glanceclient import Client as glanceclient
 from neutronclient.v2_0 import client as neutronclient
 from novaclient import client as novaclient
