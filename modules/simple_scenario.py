@@ -106,6 +106,7 @@ class ScenarioManager():
             'stop': {'condition': ['ACTIVE', 'SHUTOFF', 'RESCUED'], 'function': (lambda x: x.stop())}
         }
 
+        print("vm state: "+self.get_vm_status(name))
         if name in self.vms and state in state_dict and self.get_vm_status(name) in state_dict[state]['condition']:
             return state_dict[state]['function'](self.vms[name])
 
@@ -115,7 +116,7 @@ class ScenarioManager():
             vm_list.append(self.vm_create())
         print('VMs Created!')
         for state in state_list:
-            print('Changing vms state to'+state)
+            print('Changing vms state to '+state)
             time.sleep(sleep)
             for vm in vm_list:
                 self.vm_set_state(vm, state)

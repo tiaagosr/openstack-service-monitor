@@ -101,9 +101,6 @@ class DataPlotting():
             plt.plot(plot_data['y'], plot_data[port], label='TCP port '+str(port))
 
         plt.legend(tcp_port_list, loc='upper left')
-        plt.show()
-
-    def 
 
 
     def _db_service_data(self, cursor):
