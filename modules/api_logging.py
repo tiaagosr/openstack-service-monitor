@@ -1,4 +1,5 @@
-from scapy.all import IP, Packet, sniff, TCP, IPv6
+from scapy.all import IP, Packet, sniff, TCP, IPv6, bind_layers, Raw
+from scapy_http.http import *
 from threading import Thread, Timer, Event
 from modules.definitions import MonitoringModule, DictionaryInit
 
@@ -11,25 +12,26 @@ class ApiLogging(MonitoringModule):
         self.metering_result = self.dict.metering_dictionary()
         self.port_mapping = self.dict.api_ports()
         self.api_buffer = self.dict.port_dictionary()
+        self._bind_ports_http()
+        print(self.api_buffer)
+
+    def _bind_ports_http(self):
+        for port in self.port_mapping:
+            bind_layers(TCP, HTTP, sport=port)
+            bind_layers(TCP, HTTP, dport=port)
 
     def measure_packet(self, packet):
-        if IP in packet:
-            IP_layer = IP
-        elif IPv6 in packet:
-            IP_layer = IPv6
-        else:
-            return
-
-        if packet.haslayer('HTTP') and packet.haslayer('Raw'):
-            dport = self.classify_port(packet[TCP].dport)
-            self.api_buffer[dport].append(packet[Raw].load)
+        if packet.haslayer('Raw'):
+            port = self.packet_port(packet, self.port_mapping)
+            self.api_buffer[port].append(packet[Raw].load)
 
     def computate_and_persist(self):
+        print(self.api_buffer)
         for port in self.api_buffer:
             tmp_list = list(self.api_buffer[port])
             self.api_buffer[port] = []
             for entry in tmp_list:
-                print("Destination: "+self.classify_port(port)+"\nContent: "+entry)
+                print("Destiny: "+str(port))
     
     def classify_port(self, port):
         if port in self.port_mapping:
@@ -43,7 +45,7 @@ class ApiLogging(MonitoringModule):
 
     def start_monitoring(self):
         print("Logging API requests")
-        self.start_sniffing()
+        self.start_sniffing({})
         self.start()
 
     def _db_init_persistance(self, cursor):
