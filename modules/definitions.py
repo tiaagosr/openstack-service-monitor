@@ -80,4 +80,6 @@ class DictionaryInit(object):
             for value in dict[key]:
                 new_dict[value] = key
         return new_dict
-    
+
+
+    class StoppableThread(Thread):

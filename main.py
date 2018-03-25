@@ -26,3 +26,5 @@ if __name__ == '__main__':
 
     scenario = ScenarioManager()
     scenario.test_scenario(2, ['suspend', 'resume', 'stop'])
+
+    link_metering.stop_execution()
