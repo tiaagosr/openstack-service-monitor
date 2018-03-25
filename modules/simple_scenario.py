@@ -109,14 +109,16 @@ class ScenarioManager():
         if name in self.vms and state in state_dict and self.get_vm_status(name) in state_dict[state]['condition']:
             return state_dict[state]['function'](self.vms[name])
 
-    def test_scenario(self, vm_count=1, state_list=['stop']):
+    def test_scenario(self, vm_count=1, state_list=['stop'], sleep=120):
         vm_list = []
         for i in range(vm_count):
             vm_list.append(self.vm_create())
         print('VMs Created!')
         for state in state_list:
-            print('Changing vms state to '+state)
-            time.sleep(60)
+            print('Changing vms state to'+state)
+            time.sleep(sleep)
             for vm in vm_list:
                 self.vm_set_state(vm, state)
+        time.sleep(120)
+        exit()
 
