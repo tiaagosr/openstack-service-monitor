@@ -63,13 +63,11 @@ class ScenarioManager():
         return self.nics
 
     def get_vm_status(self, name):
-        '''
         session = self.authenticate()
         nova = novaclient.Client('2.1', session=session)
         response = nova.servers.list(search_opts={'uuid': self.vms[name]})
+        self.vms['name'] = response[0]
         return response[0].status
-        '''
-        return self.vms[name].status
 
     def vm_create(self, image=None, flavor=None, name=None):
         if image is None:
