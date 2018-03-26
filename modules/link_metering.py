@@ -37,7 +37,7 @@ class LinkMetering(MonitoringModule):
     def calculate_usage(self):
         # Shallow copy dict shared by threads
         buffer_copy = dict(self.metering_buffer)
-        print(buffer_copy)
+
         self.metering_buffer = self.dict.metering_buffer()
         for traffic_type in buffer_copy:
             for port in buffer_copy[traffic_type]:
@@ -48,10 +48,11 @@ class LinkMetering(MonitoringModule):
                     self.metering_result[traffic_type]['etc_ports'][port] = port_usage
                 self.metering_result[traffic_type][service] += port_usage
         del buffer_copy
+        print(self.metering_result)
         return self.metering_result
 
     def is_ephemeral_port(self, port):
-        if port != 35357 and port >= 32768 and port <= 60999:
+        if port != 35357 and 32768 <= port <= 60999:
             return True
         return False
 
