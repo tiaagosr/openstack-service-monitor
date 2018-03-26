@@ -65,7 +65,7 @@ class LinkMetering(MonitoringModule):
         return 'etc'
 
     def start_monitoring(self):
-        print("Metering link usage, interval: " + str(self.aux_thread_interval))
+        print("Metering link usage, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)
         self.start_sniffing()
         self.start()
 
