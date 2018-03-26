@@ -47,7 +47,7 @@ class LinkMetering(MonitoringModule):
                 if service == 'etc' and not self.is_ephemeral_port(port):
                     self.metering_result[traffic_type]['etc_ports'][port] = port_usage
                 self.metering_result[traffic_type][service] += port_usage
-        print(buffer_copy)
+            print(buffer_copy[traffic_type])
         del buffer_copy
         print(self.metering_result)
         return self.metering_result
