@@ -3,6 +3,7 @@ from scapy.all import sniff, Packet, TCP, IP, IPv6
 from database import DBSession
 import os
 import time
+import copy
 
 
 class MonitoringModule(Thread):
@@ -101,8 +102,8 @@ class DictionaryInit(object):
         return dict
 
     def metering_dictionary(self) -> dict:
-        services = {'etc': 0, 'nova': 0, 'keystone': 0, 'swift': 0, 'glance': 0, 'cinder': 0, 'ceph': 0, 'etc_ports': dict({})}
-        return {MonitoringModule.TRAFFIC_INBOUND: dict(services), MonitoringModule.TRAFFIC_OUTBOUND: dict(services)}
+        services = {'etc': 0, 'nova': 0, 'keystone': 0, 'swift': 0, 'glance': 0, 'cinder': 0, 'ceph': 0, 'etc_ports': {}}
+        return {MonitoringModule.TRAFFIC_INBOUND: copy.deepcopy(services), MonitoringModule.TRAFFIC_OUTBOUND: copy.deepcopy(services)}
 
     def metering_buffer(self) -> dict:
         return {MonitoringModule.TRAFFIC_INBOUND: {}, MonitoringModule.TRAFFIC_OUTBOUND: {}}
