@@ -37,7 +37,7 @@ class LinkMetering(MonitoringModule):
     def calculate_usage(self):
         # Shallow copy dict shared by threads
         buffer_copy = dict(self.metering_buffer)
-
+        print(buffer_copy)
         self.metering_buffer = self.dict.metering_buffer()
         for traffic_type in buffer_copy:
             for port in buffer_copy[traffic_type]:
