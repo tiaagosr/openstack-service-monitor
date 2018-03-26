@@ -24,7 +24,5 @@ if __name__ == '__main__':
     link_metering = LinkMetering(iface=current_interface, dbpath=db_file, interval=5)
     link_metering.start_monitoring()
 
-    #scenario = ScenarioManager()
-    #scenario.test_scenario(2, ['suspend', 'resume', 'stop'])
-
-    #link_metering.stop_execution()
+    scenario = ScenarioManager()
+    scenario.test_scenario(2, ['suspend', 'resume', 'stop'])
