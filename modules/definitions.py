@@ -1,9 +1,17 @@
 from threading import Thread, Timer, Event
-from scapy.all import sniff, Packet, TCP
+from scapy.all import sniff, Packet, TCP, IP
 from database import DBSession
+import os
+import time
+
 
 class MonitoringModule(Thread):
-    def __init__(self, iface='lo', filter='tcp', action=None, dbpath=':memory:'):
+    MODE_IPV4 = 0
+    MODE_IPV6 = 1
+    TRAFFIC_OUTBOUND = 'out'
+    TRAFFIC_INBOUND = 'in'
+
+    def __init__(self, iface='lo', filter='tcp', action=None, dbpath=':memory:', mode=MODE_IPV4):
         Thread.__init__(self)
         self.stopped = Event()
         self.sniff_iface = iface
@@ -11,9 +19,23 @@ class MonitoringModule(Thread):
         self.sniff_thread = None
         self.action = self.default_sniff_action if action is None else action
         self.db = DBSession(dbpath)
+        self.mode = mode
+        self.iface_ip = self.get_iface_ip(iface, mode)
+        self.start_time = time.time()
 
     def default_sniff_action(self, packet):
         return
+
+    def execution_time(self) -> int:
+        return round(time.time() - self.start_time)
+
+    def get_iface_ip(self, iface: str, mode=MODE_IPV4) -> str:
+        cmd = 'ip addr show '+iface
+        if mode == MonitoringModule.MODE_IPV6:
+            split = "inet6 "
+        else:
+            split = "inet "
+        return os.popen(cmd).read().split(split)[1].split("/")[0]
     
     def start_sniffing(self, args={}):
         self.sniff_thread = Thread(target=sniff, kwargs={'iface':self.sniff_iface, 'prn':self.action, 'filter':self.sniff_filter, 'store':0}, **args)
@@ -23,17 +45,23 @@ class MonitoringModule(Thread):
     def stop_execution(self):
         self.stopped.set()
 
-    def packet_port(self, packet, port_map):
-        if TCP not in packet:
-            return None
-        d_port = packet[TCP].dport
-        s_port = packet[TCP].sport
-        #packet port is the client dport or the server sport
-        if s_port in port_map:
-            port = s_port
-        else:
-            port = d_port
-        return port
+    def classify_packet(self, packet: Packet, port_map: dict, iface_ip: str) -> (str, str):
+        traffic_type = None
+        port = None
+
+        if IP in packet:
+            if iface_ip in packet.src:
+                traffic_type = MonitoringModule.TRAFFIC_OUTBOUND
+            else:
+                traffic_type = MonitoringModule.TRAFFIC_INBOUND
+        if TCP in packet:
+            #packet port is the client dport or the server sport
+            if packet.sport in port_map:
+                port = packet.sport
+            else:
+                port = packet.dport
+
+        return port, traffic_type
         
 
 
@@ -41,7 +69,7 @@ class DictionaryInit(object):
     def __init__(self):
         return
         
-    def metering_ports(self):
+    def metering_ports(self) -> dict:
         port_range = {'nova': set([5900, 6080, 6081, 6082, 8773, 8774, 8775] + list(range(5900, 5999))), 
               'keystone': set([5000, 35357]), 
               'swift': set([873, 6000, 6001, 6002, 8080]), 
@@ -50,7 +78,7 @@ class DictionaryInit(object):
               'ceph': set([6800, 7300])}
         return self.invert_dictionary_relationship(port_range)
 
-    def api_ports(self):
+    def api_ports(self) -> dict:
         port_range = {'nova': set([8774]), 
               'keystone': set([5000, 35357]), 
               'swift': set([8080]),
@@ -60,26 +88,24 @@ class DictionaryInit(object):
               'ceph': set([6789])}
         return self.invert_dictionary_relationship(port_range)
 
-    def port_dictionary(self):
+    def port_dictionary(self) -> dict:
         dict = self.api_ports()
         for port in dict:
             dict[port] = []
         dict['etc'] = []
         return dict
 
-    def metering_dictionary(self):
-        return {'etc' : 0, 'nova': 0, 'keystone': 0, 'swift': 0, 'glance': 0, 'cinder': 0, 'ceph': 0, 'etc_ports' : {}}
+    def metering_dictionary(self) -> dict:
+        services = {'etc': 0, 'nova': 0, 'keystone': 0, 'swift': 0, 'glance': 0, 'cinder': 0, 'ceph': 0, 'etc_ports': {}}
+        return {MonitoringModule.TRAFFIC_INBOUND: dict(services), MonitoringModule.TRAFFIC_OUTBOUND: dict(services)}
 
-    def add_multiple_key_single_value(self, keys=[], value=None, dict={}):
+    def add_multiple_key_single_value(self, keys: list=[], value=None, dictionary: dict={}):
         for key in keys:
-            dict[key] = value
+            dictionary[key] = value
     
-    def invert_dictionary_relationship(self, dict):
+    def invert_dictionary_relationship(self, dictionary: dict) -> dict:
         new_dict = {}
-        for key in dict:
-            for value in dict[key]:
+        for key in dictionary:
+            for value in dictionary[key]:
                 new_dict[value] = key
         return new_dict
-
-
-    class StoppableThread(Thread):
