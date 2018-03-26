@@ -1,8 +1,6 @@
 from scapy.all import IP, Packet, sniff, TCP
 from modules.definitions import MonitoringModule, DictionaryInit
 import json
-import time
-
 
 # Inbound and Outbound: self.metering_result
 class LinkMetering(MonitoringModule):
@@ -10,7 +8,7 @@ class LinkMetering(MonitoringModule):
         super().__init__(iface, sniff_filter, self.measure_packet, dbpath, mode)
         self.aux_thread_interval = interval
         self.ignored_count = 0
-        self.metering_buffer = {}
+        self.metering_buffer = self.dict.metering_buffer()
         self.dict = DictionaryInit()
         self.metering_result = self.dict.metering_dictionary()
         self.port_mapping = self.dict.metering_ports()
@@ -39,7 +37,7 @@ class LinkMetering(MonitoringModule):
     def calculate_usage(self):
         # Shallow copy dict shared by threads
         buffer_copy = dict(self.metering_buffer)
-        self.metering_buffer = {}
+        self.metering_buffer = self.dict.metering_buffer()
         for traffic_type in buffer_copy:
             for port in buffer_copy[traffic_type]:
                 port_usage = round(buffer_copy[traffic_type][port] / self.aux_thread_interval)

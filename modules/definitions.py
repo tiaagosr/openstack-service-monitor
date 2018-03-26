@@ -99,6 +99,9 @@ class DictionaryInit(object):
         services = {'etc': 0, 'nova': 0, 'keystone': 0, 'swift': 0, 'glance': 0, 'cinder': 0, 'ceph': 0, 'etc_ports': {}}
         return {MonitoringModule.TRAFFIC_INBOUND: dict(services), MonitoringModule.TRAFFIC_OUTBOUND: dict(services)}
 
+    def metering_buffer(self) -> dict:
+        return {MonitoringModule.TRAFFIC_INBOUND: {}, MonitoringModule.TRAFFIC_OUTBOUND: {}}
+
     def add_multiple_key_single_value(self, keys: list=[], value=None, dictionary: dict={}):
         for key in keys:
             dictionary[key] = value
