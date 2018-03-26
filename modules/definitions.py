@@ -101,7 +101,7 @@ class DictionaryInit(object):
         return dict
 
     def metering_dictionary(self) -> dict:
-        services = {'etc': 0, 'nova': 0, 'keystone': 0, 'swift': 0, 'glance': 0, 'cinder': 0, 'ceph': 0, 'etc_ports': {}}
+        services = {'etc': 0, 'nova': 0, 'keystone': 0, 'swift': 0, 'glance': 0, 'cinder': 0, 'ceph': 0, 'etc_ports': dict({})}
         return {MonitoringModule.TRAFFIC_INBOUND: dict(services), MonitoringModule.TRAFFIC_OUTBOUND: dict(services)}
 
     def metering_buffer(self) -> dict:
