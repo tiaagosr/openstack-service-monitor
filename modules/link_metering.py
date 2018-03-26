@@ -8,8 +8,8 @@ class LinkMetering(MonitoringModule):
         super().__init__(iface, sniff_filter, self.measure_packet, dbpath, mode)
         self.aux_thread_interval = interval
         self.ignored_count = 0
-        self.metering_buffer = self.dict.metering_buffer()
         self.dict = DictionaryInit()
+        self.metering_buffer = self.dict.metering_buffer()
         self.metering_result = self.dict.metering_dictionary()
         self.port_mapping = self.dict.metering_ports()
 
