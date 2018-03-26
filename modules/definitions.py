@@ -1,5 +1,5 @@
 from threading import Thread, Timer, Event
-from scapy.all import sniff, Packet, TCP, IP
+from scapy.all import sniff, Packet, TCP, IP, IPv6
 from database import DBSession
 import os
 import time
@@ -20,6 +20,10 @@ class MonitoringModule(Thread):
         self.action = self.default_sniff_action if action is None else action
         self.db = DBSession(dbpath)
         self.mode = mode
+        if mode == MonitoringModule.MODE_IPV4:
+            self.ip_layer = IP
+        else:
+            self.ip_layer = IPv6
         self.iface_ip = self.get_iface_ip(iface, mode)
         self.start_time = time.time()
 
@@ -49,11 +53,12 @@ class MonitoringModule(Thread):
         traffic_type = None
         port = None
 
-        if IP in packet:
-            if iface_ip in packet.src:
+        if self.ip_layer in packet:
+            if iface_ip in packet[self.ip_layer].src:
                 traffic_type = MonitoringModule.TRAFFIC_OUTBOUND
             else:
                 traffic_type = MonitoringModule.TRAFFIC_INBOUND
+            print("src: "+packet[self.ip_layer].src+" dst:"+packet[self.ip_layer].dst+" type: "+traffic_type)
         if TCP in packet:
             #packet port is the client dport or the server sport
             if packet.sport in port_map:
