@@ -58,7 +58,7 @@ class MonitoringModule(Thread):
                 traffic_type = MonitoringModule.TRAFFIC_OUTBOUND
             else:
                 traffic_type = MonitoringModule.TRAFFIC_INBOUND
-            print("src: "+packet[self.ip_layer].src+" dst:"+packet[self.ip_layer].dst+" type: "+traffic_type)
+            #print("src: "+packet[self.ip_layer].src+" dst:"+packet[self.ip_layer].dst+" type: "+traffic_type)
         if TCP in packet:
             #packet port is the client dport or the server sport
             if packet.sport in port_map:
