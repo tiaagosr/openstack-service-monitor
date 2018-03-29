@@ -1,4 +1,4 @@
-# openstack-service-monitor
+# Openstack service monitor
 A network monitoring system developed to gather information from Management Networks in OpenStack deployments.
 This software operates on the host OS of a deployed controller, accessing all the management interface traffic.
 
