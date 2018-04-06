@@ -89,7 +89,7 @@ class LinkMetering(MonitoringModule):
                 top_ports = [(a, int(x)) for a, x in current_result['etc_ports'].items()]
                 sorted_top_ports = sorted(top_ports, key=lambda x: x[1], reverse=True)[:10]
                 current_result['etc_ports'] = json.dumps(sorted_top_ports)
-                print(current_result['etc_ports'])
+                print(current_result)
         self.db.wrap_access(self._db_persist_result, result)
 
     def _db_print_results(self, cursor):
