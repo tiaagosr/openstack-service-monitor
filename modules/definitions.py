@@ -44,7 +44,6 @@ class MonitoringModule(Thread):
     
     def start_sniffing(self, args={}):
         self.sniff_thread = Thread(target=sniff, kwargs={'iface':self.sniff_iface, 'prn':self.action, 'filter':self.sniff_filter, 'store':0}, **args)
-        #self.sniff_thread = Thread(target=sniff, kwargs={'iface':self.sniff_iface, 'prn':self.action, 'filter':self.sniff_filter, 'store':0, 'offline':'test/labp2dapi.pcap'}, **args)
         self.sniff_thread.start()
 
     def stop_execution(self):
@@ -73,25 +72,11 @@ class MonitoringModule(Thread):
 
 class DictionaryInit(object):
     def __init__(self):
-<<<<<<< HEAD
-        return
-        
-    def metering_ports(self):
-        port_range = {'nova': set([5900, 6080, 6081, 6082, 8773, 8774, 8775] + list(range(5900, 5999))), 
-=======
         self.link_metering_ports = {'nova': set([5900, 6080, 6081, 6082, 8773, 8774, 8775] + list(range(5900, 5999))),
->>>>>>> development
             'keystone': set([5000, 35357]),
             'swift': set([873, 6000, 6001, 6002, 8080]),
             'glance': set([9191, 9292]),
             'cinder': set([3260, 8776]),
-<<<<<<< HEAD
-            #'murano': set([8082]),
-            'neutron': set([9696]),
-            'ceilometer': set([8777]),
-            #'ceph': set([6800, 7300])}
-        return self.invert_dictionary_relationship(port_range)
-=======
             'neutron': set([9696]),
             'ceilometer': set([8777])
             #'ceph': set([6800, 7300])
@@ -99,7 +84,6 @@ class DictionaryInit(object):
 
     def metering_services(self):
         return self.link_metering_ports.keys()
->>>>>>> development
 
     def metering_ports(self) -> dict:
         return self.invert_dictionary_relationship(self.link_metering_ports)
