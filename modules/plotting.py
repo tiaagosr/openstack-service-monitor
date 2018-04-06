@@ -1,11 +1,10 @@
 import matplotlib.pyplot as plt
 from cycler import cycler
 from datetime import datetime
-from database import DBSession
 import json
 from functools import reduce
-
 from modules.definitions import MonitoringModule
+from modules.link_metering import LinkMeteringPersistence
 
 
 class DataPlotting:
@@ -13,18 +12,16 @@ class DataPlotting:
     TRAFFIC_INBOUND = MonitoringModule.TRAFFIC_INBOUND
 
     def __init__(self, dbpath, services=['cinder', 'glance', 'keystone', 'nova', 'swift', 'neutron', 'ceilometer', 'etc']):
-        self.db = DBSession(dbpath)
-        self.db.create_conn()
+        self.db = LinkMeteringPersistence(services, dbpath)
         self.date_format = '%H:%M:%S'
         self.services = services
     
     def get_service_data(self, traffic_type=None):
-        db_data = self.db.wrap_access(self._db_service_data, traffic_type)
+        db_data = self.db.service_data(traffic_type)
         plot_value = {
             'y': [],
             'services': {x: [] for x in self.services}
         }
-        i = 0
 
         def row_increase(pos, val):
             pos[-1] += val
@@ -32,62 +29,55 @@ class DataPlotting:
         def row_append(pos, val):
             pos.append(val)
 
-        for row in db_data:
+        for index, row in enumerate(db_data):
             # Every odd row sum its value to the even row before
             # Reason: each metering creates 2 rows, one for inbound traffic and one for outbound traffic
             # The sum only happens if no traffic type was defined
-            if i % 2 != 0 and traffic_type is not None:
+            if index % 2 != 0 and traffic_type is not None:
                 row_operation = row_increase
             #Every even row, starting from 0
             else:
                 plot_value['y'].append(datetime.strptime(row[0], self.date_format))
                 row_operation = row_append
-            cur_row = 1
-            for service in plot_value['services']:
-                row_operation(plot_value['services'][service], row[cur_row])
-                cur_row += 1
-            i += 1
+            for column, service in enumerate(plot_value['services'], 1):
+                row_operation(plot_value['services'][service], row[column])
 
         return plot_value
 
     def get_etc_port_data(self, traffic_type=None):
-        db_data = self.db.wrap_access(self._db_etc_port_data, traffic_type)
-        db_port_list = self.db.wrap_access(self._db_etc_port_list, traffic_type)
+        db_data = self.db.etc_port_data(traffic_type)
 
         plot_value = {
             'y': [],
             'ports': {}
         }
 
-        if db_port_list is not None:
-            etc_ports = json.loads(db_port_list[0])
-            for port in etc_ports:
-                plot_value['ports'][port[0]] = []
-
-        i = 0
-
         def row_increase(pos, val):
             pos[-1] += val
 
         def row_append(pos, val):
             pos.append(val)
 
-        for row in db_data:
+        for i, row in enumerate(db_data):
             if i % 2 != 0 and traffic_type is not None:
                 row_operation = row_increase
             #Every even row, starting from 0
             else:
                 plot_value['y'].append(datetime.strptime(row[2], self.date_format))
                 row_operation = row_append
-            etc_port_tuples = json.loads(row[1])
-            plotted_port_tuples = [x for x in etc_port_tuples if x[0] in plot_value]
-            ports_index = list(map(lambda x: x[0], etc_port_tuples))
-            not_plotted_port_tuples = [x for x in plot_value['ports'] if x not in ports_index]
-            for port in plotted_port_tuples:
-                row_operation(plot_value['ports'][port[0]], port[1])
+            row_port_tuples = json.loads(row[1])
+            for port_tuple in row_port_tuples:
+                port_value = port_tuple['value']
+                port_number = port_tuple['port']
+                if port_number not in plot_value['ports']:
+                    #Create new port in plotting list
+                    plot_value['ports']['port'] = [0] * i
+                #New entry to existing port
+                row_operation(plot_value['ports'][port_number], port_value)
+            current_row_ports_index = list(map(lambda x: x['port'], row_port_tuples))
+            not_plotted_port_tuples = [x for x in plot_value['ports'] if x not in current_row_ports_index]
             for port in not_plotted_port_tuples:
                 row_operation(plot_value['ports'][port], 0)
-            i += 1
 
         return plot_value
 
@@ -161,39 +151,3 @@ class DataPlotting:
             startangle=90)
         ax1.axis('equal')
         plt.show()
-
-    def _db_metering_query(self, fields: list, traffic_type=None) -> str:
-        query = 'SELECT '
-        first = True
-        # Generate query based on service list
-        for f in fields:
-            if first:
-                first = False
-                query += f
-            else:
-                query += ', '+f
-        query += ' FROM link_usage'
-        if traffic_type is not None:
-            query += ' where type="{type}"'.format(type=traffic_type)
-        query += ' ORDER BY id'
-        return query
-
-    def _db_service_data(self, cursor, traffic_type=None):
-        fields = ['time']
-        for service in self.services:
-            fields.append('m_'+service)
-        query = self._db_metering_query(fields, traffic_type)
-        cursor.execute(query)
-        return cursor.fetchall()
-
-    def _db_etc_port_data(self, cursor, traffic_type):
-        fields = ['m_etc', 'etc_ports', 'time', 'type']
-        query = self._db_metering_query(fields, traffic_type)
-        cursor.execute(query)
-        return cursor.fetchall()
-
-    def _db_etc_port_list(self, cursor, traffic_type):
-        fields = ['etc_ports', 'type']
-        query = self._db_metering_query(fields, traffic_type)
-        cursor.execute(query)
-        return cursor.fetchone()
