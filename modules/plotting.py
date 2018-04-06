@@ -8,8 +8,11 @@ from functools import reduce
 from modules.definitions import MonitoringModule
 
 
-class DataPlotting():
-    def __init__(self, dbpath, services=['cinder', 'glance', 'keystone', 'nova', 'swift', 'neutron', 'ceilometer']):
+class DataPlotting:
+    TRAFFIC_OUTBOUND = MonitoringModule.TRAFFIC_OUTBOUND
+    TRAFFIC_INBOUND = MonitoringModule.TRAFFIC_INBOUND
+
+    def __init__(self, dbpath, services=['cinder', 'glance', 'keystone', 'nova', 'swift', 'neutron', 'ceilometer', 'etc']):
         self.db = DBSession(dbpath)
         self.db.create_conn()
         self.date_format = '%H:%M:%S'
@@ -19,30 +22,27 @@ class DataPlotting():
         db_data = self.db.wrap_access(self._db_service_data, traffic_type)
         plot_value = {
             'y': [],
-            'etc': [],
-            'services': {}
+            'services': {x: [] for x in self.services}
         }
-
-        for service in self.services:
-            plot_value['services'][service] = []
-
         i = 0
+
+        def row_increase(pos, val):
+            pos[-1] += val
+
+        def row_append(pos, val):
+            pos.append(val)
+
         for row in db_data:
             # Every odd row sum its value to the even row before
             # Reason: each metering creates 2 rows, one for inbound traffic and one for outbound traffic
             # The sum only happens if no traffic type was defined
             if i % 2 != 0 and traffic_type is not None:
-                def row_operation(pos, val):
-                    pos[-1] += val
+                row_operation = row_increase
             #Every even row, starting from 0
             else:
                 plot_value['y'].append(datetime.strptime(row[0], self.date_format))
-
-                def row_operation(pos, val):
-                    pos.append(val)
-
-            row_operation(plot_value['etc'], row[1])
-            cur_row = 2
+                row_operation = row_append
+            cur_row = 1
             for service in plot_value['services']:
                 row_operation(plot_value['services'][service], row[cur_row])
                 cur_row += 1
@@ -65,16 +65,20 @@ class DataPlotting():
                 plot_value['ports'][port[0]] = []
 
         i = 0
+
+        def row_increase(pos, val):
+            pos[-1] += val
+
+        def row_append(pos, val):
+            pos.append(val)
+
         for row in db_data:
             if i % 2 != 0 and traffic_type is not None:
-                def row_operation(pos, val):
-                    pos[-1] += val
+                row_operation = row_increase
             #Every even row, starting from 0
             else:
                 plot_value['y'].append(datetime.strptime(row[2], self.date_format))
-
-                def row_operation(pos, val):
-                    pos.append(val)
+                row_operation = row_append
             etc_port_tuples = json.loads(row[1])
             plotted_port_tuples = [x for x in etc_port_tuples if x[0] in plot_value]
             ports_index = list(map(lambda x: x[0], etc_port_tuples))
@@ -110,7 +114,6 @@ class DataPlotting():
         if categorized:
             plot_data = self.get_service_data(traffic_type)
             data = plot_data['services']
-            plt.plot(plot_data['y'], plot_data['etc'])
             legends = data
         else:
             plot_data = self.get_etc_port_data(traffic_type)
@@ -145,37 +148,38 @@ class DataPlotting():
             title = 'Outbound Traffic'
         elif traffic_type == MonitoringModule.TRAFFIC_INBOUND:
             title = 'Inbound Traffic'
-        self.format_plot(title)
+        fig1, ax1 = self.format_plot(title)
 
         sizes = []
         for line in data:
-            sizes.append(reduce((lambda x, y: x + y), line))
+            sizes.append(reduce((lambda x, y: x + y), data[line]))
+        legends = [x for index, x in enumerate(legends) if sizes[index] > 0]
+        sizes = [x for x in sizes if x > 0]
         explode = (0, 0.1, 0, 0)  # only "explode" the 2nd slice (i.e. 'Hogs')
 
-        fig1, ax1 = plt.subplots()
-        ax1.pie(sizes, explode=explode, labels=legends, autopct='%1.1f%%',
-                shadow=True, startangle=90)
+        ax1.pie(sizes, labels=legends, autopct='%1.1f%%',
+            startangle=90)
         ax1.axis('equal')
         plt.show()
 
-    def _db_metering_query(self, fields: list[str], traffic_type=None) -> str:
+    def _db_metering_query(self, fields: list, traffic_type=None) -> str:
         query = 'SELECT '
         first = True
         # Generate query based on service list
         for f in fields:
             if first:
                 first = False
-                query += f+' '
+                query += f
             else:
                 query += ', '+f
         query += ' FROM link_usage'
         if traffic_type is not None:
-            query += 'where type="{type}"'.format(type=traffic_type)
+            query += ' where type="{type}"'.format(type=traffic_type)
         query += ' ORDER BY id'
         return query
 
     def _db_service_data(self, cursor, traffic_type=None):
-        fields = ['time', 'm_etc']
+        fields = ['time']
         for service in self.services:
             fields.append('m_'+service)
         query = self._db_metering_query(fields, traffic_type)
