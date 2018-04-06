@@ -107,6 +107,7 @@ class DictionaryInit(object):
 
     def metering_dictionary(self) -> dict:
         services = {x: 0 for x in self.metering_services()}
+        services['etc'] = 0
         services['etc_ports'] = {}
         return {MonitoringModule.TRAFFIC_INBOUND: copy.deepcopy(services), MonitoringModule.TRAFFIC_OUTBOUND: copy.deepcopy(services)}
 
