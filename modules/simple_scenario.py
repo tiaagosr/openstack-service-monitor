@@ -118,7 +118,6 @@ class ScenarioManager():
             time.sleep(sleep)
             for vm in vm_list:
                 self.vm_set_state(vm, state)
-        time.sleep(sleep)
+        time.sleep(120)
         print('Scenario Finished!')
-        exit()
 
