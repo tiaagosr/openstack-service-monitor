@@ -81,7 +81,6 @@ class LinkMetering(MonitoringModule):
             query = '''INSERT INTO link_usage (interface, type, time, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_neutron, m_swift, m_ceilometer, etc_ports) 
                 VALUES ("{iface}", "{type}", time({time}, 'unixepoch'), "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{neutron}", "{swift}", "{ceilometer}", '{etc_ports}')'''\
                 .format(iface=self.sniff_iface, type=traffic_type, time=exec_time, ignored_count=str(self.ignored_count), **result[traffic_type])
-            print(query)
             cursor.execute(query)
 
     def persist_metering_result(self, result: dict = {}):
@@ -91,7 +90,6 @@ class LinkMetering(MonitoringModule):
                 top_ports = [{'port': a, 'value': int(x)} for a, x in current_result['etc_ports'].items()]
                 sorted_top_ports = sorted(top_ports, key=lambda x: x['value'], reverse=True)[:10]
                 current_result['etc_ports'] = json.dumps(sorted_top_ports)
-                print(current_result)
         self.db.wrap_access(self._db_persist_result, result)
 
     def _db_print_results(self, cursor):
