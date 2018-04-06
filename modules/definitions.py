@@ -43,11 +43,14 @@ class DictionaryInit(object):
         
     def metering_ports(self):
         port_range = {'nova': set([5900, 6080, 6081, 6082, 8773, 8774, 8775] + list(range(5900, 5999))), 
-              'keystone': set([5000, 35357]), 
-              'swift': set([873, 6000, 6001, 6002, 8080]), 
-              'glance': set([9191, 9292]),
-              'cinder': set([3260, 8776]),
-              'ceph': set([6800, 7300])}
+            'keystone': set([5000, 35357]),
+            'swift': set([873, 6000, 6001, 6002, 8080]),
+            'glance': set([9191, 9292]),
+            'cinder': set([3260, 8776]),
+            #'murano': set([8082]),
+            'neutron': set([9696]),
+            'ceilometer': set([8777]),
+            #'ceph': set([6800, 7300])}
         return self.invert_dictionary_relationship(port_range)
 
     def api_ports(self):
