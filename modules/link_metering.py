@@ -79,8 +79,8 @@ class LinkMetering(MonitoringModule):
         exec_time = self.execution_time()
         for traffic_type in result:
             query = '''INSERT INTO link_usage (interface, type, time, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_neutron, m_swift, m_ceilometer, etc_ports) 
-                VALUES ("{iface}", "{type}", time({time}, 'unixepoch'), "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{neutron}", "{swift}", "{ceilometer}", "{etc_ports}")'''
-            .format(iface=self.sniff_iface, type=traffic_type, time=exec_time, ignored_count=str(self.ignored_count), **result[traffic_type])
+                VALUES ("{iface}", "{type}", time({time}, 'unixepoch'), "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{neutron}", "{swift}", "{ceilometer}", "{etc_ports}")'''\
+                .format(iface=self.sniff_iface, type=traffic_type, time=exec_time, ignored_count=str(self.ignored_count), **result[traffic_type])
             print(query)
             cursor.execute(query)
 
