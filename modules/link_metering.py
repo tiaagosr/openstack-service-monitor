@@ -50,9 +50,7 @@ class LinkMetering(MonitoringModule):
         return self.metering_result
 
     def is_ephemeral_port(self, port):
-        if port != 35357 and 32768 <= port <= 60999:
-            return True
-        return False
+        return port != 35357 and 32768 <= port <= 60999
 
     def run(self):
         self.init_persistance()
@@ -71,7 +69,7 @@ class LinkMetering(MonitoringModule):
 
     def _db_init_persistance(self, cursor):
         cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS link_usage(id INTEGER PRIMARY KEY, type VARCHAR(5), interface VARCHAR(40), m_etc INTEGER, m_nova INTEGER, m_keystone INTEGER, m_glance INTEGER, m_cinder INTEGER, m_swift INTEGER, m_ceph INTEGER, etc_ports TEXT, ignored_count INTEGER, time DATE)''')
+            '''CREATE TABLE IF NOT EXISTS link_usage(id INTEGER PRIMARY KEY, type VARCHAR(5), interface VARCHAR(40), m_etc INTEGER, m_nova INTEGER, m_neutron INTEGER, m_keystone INTEGER, m_glance INTEGER, m_cinder INTEGER, m_swift INTEGER, m_ceilometer INTEGER, etc_ports TEXT, ignored_count INTEGER, time DATE)''')
 
     def init_persistance(self):
         self.db.create_conn()
@@ -80,8 +78,8 @@ class LinkMetering(MonitoringModule):
     def _db_persist_result(self, cursor, result):
         exec_time = self.execution_time()
         for traffic_type in result:
-            cursor.execute('''INSERT INTO link_usage (interface, type, time, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_swift, m_ceph, etc_ports) 
-                VALUES ("{iface}", "{type}", time({time}, 'unixepoch'), "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{swift}", "{ceph}", "{etc_ports}")'''
+            cursor.execute('''INSERT INTO link_usage (interface, type, time, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_neutron, m_swift, m_ceilometer, etc_ports) 
+                VALUES ("{iface}", "{type}", time({time}, 'unixepoch'), "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{neutron}", "{swift}", "{ceilometer}", "{etc_ports}")'''
                 .format(iface=self.sniff_iface, type=traffic_type, time=exec_time, ignored_count=str(self.ignored_count), **result[traffic_type]))
 
     def persist_metering_result(self, result: dict = {}):

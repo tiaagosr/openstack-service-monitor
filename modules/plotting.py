@@ -9,7 +9,7 @@ from modules.definitions import MonitoringModule
 
 
 class DataPlotting():
-    def __init__(self, dbpath, services=['cinder', 'glance', 'keystone', 'nova', 'swift']):
+    def __init__(self, dbpath, services=['cinder', 'glance', 'keystone', 'nova', 'swift', 'neutron', 'ceilometer']):
         self.db = DBSession(dbpath)
         self.db.create_conn()
         self.date_format = '%H:%M:%S'
@@ -175,7 +175,6 @@ class DataPlotting():
         return query
 
     def _db_service_data(self, cursor, traffic_type=None):
-        # Generate query based on service list
         fields = ['time', 'm_etc']
         for service in self.services:
             fields.append('m_'+service)
