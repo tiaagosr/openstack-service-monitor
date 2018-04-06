@@ -86,8 +86,8 @@ class LinkMetering(MonitoringModule):
         for traffic_type in result:
             current_result = result[traffic_type]
             if 'etc_ports' in current_result:
-                top_ports = [(a, int(x)) for a, x in current_result['etc_ports'].items()]
-                sorted_top_ports = sorted(top_ports, key=lambda x: x[1], reverse=True)[:10]
+                top_ports = [{'port': a, 'value': int(x)} for a, x in current_result['etc_ports'].items()]
+                sorted_top_ports = sorted(top_ports, key=lambda x: x['value'], reverse=True)[:10]
                 current_result['etc_ports'] = json.dumps(sorted_top_ports)
                 print(current_result)
         self.db.wrap_access(self._db_persist_result, result)
