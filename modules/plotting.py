@@ -47,7 +47,6 @@ class DataPlotting:
 
     def get_etc_port_data(self, traffic_type=None):
         db_data = self.db.wrap_access(self._db_etc_port_data, traffic_type)
-        db_port_list = self.db.wrap_access(self._db_etc_port_list, traffic_type)
 
         plot_value = {
             'y': [],
@@ -73,7 +72,7 @@ class DataPlotting:
                 port_number = port_tuple['port']
                 if port_number not in plot_value['ports']:
                     #Create new port in plotting list
-                    plot_value['ports']['port'] = [0] * i
+                    plot_value['ports'][port_number] = [0] * i
                 #New entry to existing port
                 row_operation(plot_value['ports'][port_number], port_value)
             current_row_ports_index = list(map(lambda x: x['port'], row_port_tuples))
@@ -94,7 +93,7 @@ class DataPlotting:
         ax.get_xaxis().tick_bottom()
         ax.get_yaxis().tick_left()
 
-        cy = cycler('color', ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'turquoise', 'brown', 'grey', 'cyan'])
+        cy = cycler('color', ['red', 'green', 'blue', 'orange', 'purple', 'turquoise', 'brown', 'grey', 'cyan'])
         ax.set_prop_cycle(cy)
 
         plt.title(title)
