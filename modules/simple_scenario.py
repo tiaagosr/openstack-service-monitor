@@ -5,7 +5,6 @@ from glanceclient import Client as glanceclient
 from neutronclient.v2_0 import client as neutronclient
 from novaclient import client as novaclient
 import time
-# from definitions import MonitoringModule
 
 class ScenarioManager():
 

@@ -4,6 +4,15 @@ from threading import Thread, Timer, Event
 from modules.definitions import MonitoringModule, DictionaryInit
 
 class ApiLogging(MonitoringModule):
+    map = {
+        'nova': set([8774]),
+        'keystone': set([5000, 35357]),
+        'swift': set([8080]),
+        'glance': set([9292]),
+        'cinder': set([8776]),
+        'neutron': set([9696]),
+        'ceph': set([6789])
+    }
 
     def __init__(self, dbpath, iface='wlp2s0', filter='tcp and (port 8774 or port 5000 or port 35357 or port 8080 or port 9292 or port 8776 or port 9696)', interval=10):
         super().__init__(iface, filter, self.measure_packet, dbpath)
