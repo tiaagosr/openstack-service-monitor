@@ -32,7 +32,6 @@ class MonitoringModule(Thread):
 
     def __init__(self, iface='lo', filter='tcp', mode=MODE_IPV4):
         super().__init__()
-        self.dict = DictTools()
         self.stopped = Event()
         self.sniff_iface = iface
         self.sniff_filter = filter
@@ -45,9 +44,6 @@ class MonitoringModule(Thread):
         else:
             self.ip_layer = IPv6
         self.iface_ip = self.iface_ip(iface, mode)
-
-    def port_map(self):
-        return self.dict.invert(self.map)
 
     @staticmethod
     def execution_time() -> int:
@@ -88,9 +84,6 @@ class MonitoringModule(Thread):
 
 
 class DictTools:
-    def metering_buffer(self) -> dict:
-        return {MonitoringModule.TRAFFIC_INBOUND: {}, MonitoringModule.TRAFFIC_OUTBOUND: {}}
-
     @staticmethod
     def add_multiple_key_single_value(keys: list=[], value=None, dictionary: dict={}):
         for key in keys:

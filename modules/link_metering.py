@@ -28,9 +28,8 @@ class LinkMetering(MonitoringModule):
         self.buffer_params = {'iface': self.sniff_iface, 'services': self.services, 'interval': self.aux_thread_interval, 'service_port_map': self.port_mapping}
         tmp_buffer = self._setup_buffer()
         self.buffer = {MonitoringModule.TRAFFIC_INBOUND: tmp_buffer[0], MonitoringModule.TRAFFIC_OUTBOUND: tmp_buffer[1]}
-        self.persistance_thread = None
-        self.db_path = db_path
-        self.db_lock = Lock()
+        self.persistence = LinkMeteringPersistence(list(self.services), db_path)
+        self.buffer_lock = Lock()
 
     def measure_packet(self, packet):
         port, traffic_type = self.classify_packet(packet, self.port_mapping, self.iface_ip)
@@ -56,21 +55,19 @@ class LinkMetering(MonitoringModule):
     def calculate_usage(self):
         while not self.stopped.is_set():
             if not self.queue.empty():
-                with self.db_lock:
+                with self.buffer_lock:
                     if len(self.buffer) == 0:
                         tmp_buffer = self._setup_buffer()
                         self.buffer[MonitoringModule.TRAFFIC_INBOUND] = tmp_buffer[0]
                         self.buffer[MonitoringModule.TRAFFIC_OUTBOUND] = tmp_buffer[1]
                     packet = self.queue.get()
                     self.measure_packet(packet)
+        #Consumer Thread stopped > Stop persistence
+        self.persistence.stop_execution()
 
     def run(self):
-        self.init_persistance()
+        self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.buffer_lock)
         self.calculate_usage()
-
-    def init_persistance(self):
-        self.persistance_thread = LinkMeteringPersistence(self.buffer, self.db_lock, self.aux_thread_interval, list(self.services), self.db_path)
-        self.persistance_thread.start()
 
     def start_monitoring(self):
         print("Metering link usage, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)
@@ -119,7 +116,7 @@ class MeteringData:
 
     def port_calculation(self, port, service, usage):
         # uncategorized port
-        if service == 'etc' and not self._is_ephemeral(port):
+        if service == 'etc' and not MeteringData.is_ephemeral(port):
             self.etc_port_buffer[port] = usage
         self.services[service] += usage
 
@@ -128,7 +125,8 @@ class MeteringData:
             return self.map[port]
         return 'etc'
 
-    def _is_ephemeral(self, port):
+    @staticmethod
+    def is_ephemeral(port):
         return port != 35357 and 32768 <= port <= 60999
 
     def _sort_etc_ports(self, max_position=10):
@@ -144,15 +142,16 @@ class MeteringData:
 
 
 class LinkMeteringPersistence(Thread):
-    def __init__(self, buffer, lock, interval, services=['etc'], dbpath=':memory:'):
+    def __init__(self, services=['etc'], dbpath=':memory:'):
         super().__init__()
         self.db = DBSession(dbpath)
         self.services = services
         self.persist_query = ''
-        self.stopped = Event()
-        self.buffer = buffer
-        self.lock = lock
-        self.interval = interval
+        # Thread attributes
+        self.stopped = None
+        self.buffer = None
+        self.lock = None
+        self.interval = None
 
     def _generate_metering_query(self, fields: list, traffic_type=None) -> str:
         query = 'SELECT '
@@ -223,8 +222,15 @@ class LinkMeteringPersistence(Thread):
         self.db.wrap_access(self._generate_table)
         self.persist_query = self._generate_persist_query()
 
-    def run(self):
+    def timed_storage(self, buffer, interval, lock):
+        self.buffer = buffer
+        self.lock = lock
+        self.interval = interval
+        self.stopped = Event()
         self.init_persistance()
+        self.run()
+
+    def run(self):
         while not self.stopped.wait(self.interval):
             time = MonitoringModule.execution_time()
             with self.lock:
