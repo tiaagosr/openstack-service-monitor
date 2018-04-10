@@ -9,13 +9,13 @@ import json
 class LinkMetering(MonitoringModule):
     MAP = {
         'nova': set([5900, 6080, 6081, 6082, 8773, 8774, 8775] + list(range(5900, 5999))),
-        'keystone': set([5000, 35357]),
-        'swift': set([873, 6000, 6001, 6002, 8080]),
-        'glance': set([9191, 9292]),
-        'cinder': set([3260, 8776]),
-        'neutron': set([9696]),
-        'ceilometer': set([8777]),
-        'ceph': set([6800, 7300])
+        'keystone': {5000, 35357},
+        'swift': {873, 6000, 6001, 6002, 8080},
+        'glance': {9191, 9292},
+        'cinder': {3260, 8776},
+        'neutron': {9696},
+        'ceilometer': {8777},
+        'ceph': {6800, 7300}
     }
 
     DEFAULT_INTERVAL = 10

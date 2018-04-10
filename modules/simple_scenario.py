@@ -6,6 +6,7 @@ from neutronclient.v2_0 import client as neutronclient
 from novaclient import client as novaclient
 import time
 
+
 class ScenarioManager():
 
     def __init__(self, flavor="m1.small", image="trusty-server", auth_data=None):
