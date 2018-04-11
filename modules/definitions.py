@@ -1,6 +1,7 @@
 from threading import Thread, Event
-
 from peewee import SqliteDatabase
+import logging
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import sniff, Packet, TCP, IP, IPv6
 from queue import Queue
 import os
@@ -18,9 +19,8 @@ class SniffThread(Thread):
     def run(self):
         while not self.stopped.is_set():
             if not self.queue.full():
-                data = sniff(iface=self.iface, filter=self.filter, count=1)
+                data = sniff(iface=self.iface, filter=self.filter, count=10)
                 [self.queue.put(item) for item in data]
-                print(self.queue.qsize())
 
 
 class MonitoringModule(Thread):

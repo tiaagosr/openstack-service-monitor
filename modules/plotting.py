@@ -34,7 +34,12 @@ class DataPlotting:
             plot_value['ports'] = {}
             data_func = self.process_etc_data
 
-        for index, row in enumerate(MeteringData.select()):
+        if traffic_type != None:
+            query = MeteringData.select().where(MeteringData.type == traffic_type)
+        else:
+            query = MeteringData.select()
+
+        for index, row in enumerate(query):
             # Every odd row sum its value to the even row before
             # Reason: each metering creates 2 rows, one for inbound traffic and one for outbound traffic
             # The sum only happens if no traffic type was defined

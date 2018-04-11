@@ -1,8 +1,9 @@
-from threading import Thread, Event, Lock
-
+from threading import Thread, Lock
+import logging
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from peewee import *
 from playhouse.sqlite_ext import JSONField
-from scapy.all import IP, Packet, sniff, TCP
+from scapy.all import Packet
 from modules.definitions import MonitoringModule, DictTools
 import json
 
