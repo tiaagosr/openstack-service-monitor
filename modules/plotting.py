@@ -12,7 +12,7 @@ class DataPlotting:
     PLOT_PIE = 1
     PLOT_LINE = 0
 
-    def __init__(self, db_path, services=LinkMetering.SERVICES+['etc']):
+    def __init__(self, db_path, services=list(LinkMetering.SERVICES)+['etc']):
         LinkMetering.init_db(db_path, create_tables=False)
         self.date_format = '%H:%M:%S'
         self.services = services
@@ -28,11 +28,11 @@ class DataPlotting:
     def metering_data(self, traffic_type=None, categorized=True):
         plot_value = {'y': []}
         if categorized:
-            plot_value['services']: {x: [] for x in self.services}
-            data_func = self.process_etc_data
-        else:
-            plot_value['ports']: {}
+            plot_value['services'] = {x: [] for x in self.services}
             data_func = self.process_service_data
+        else:
+            plot_value['ports'] = {}
+            data_func = self.process_etc_data
 
         for index, row in enumerate(MeteringData.select()):
             # Every odd row sum its value to the even row before
@@ -52,7 +52,7 @@ class DataPlotting:
         for traffic in row.etc_ports:
             if traffic['port'] not in plot_value['ports']:
                 #Create new port in plotting list
-                plot_value['ports']['port'] = [0] * index
+                plot_value['ports'][traffic['port']] = [0] * index
             #New entry to existing port
             row_func(plot_value['ports'][traffic['port']], traffic['value'])
         current_row_ports_index = map(lambda x: x['port'], row.etc_ports)

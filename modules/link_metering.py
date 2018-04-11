@@ -16,7 +16,7 @@ class LinkMetering(MonitoringModule):
         'cinder': {3260, 8776},
         'neutron': {9696},
         'ceilometer': {8777},
-        'ceph': {6800, 7300}
+        #'ceph': {6800, 7300}
     }
 
     SERVICES = MAP.keys()
@@ -93,10 +93,11 @@ class MeteringData(Model):
     cinder = IntegerField(default=0, column_name='m_cinder')
     neutron = IntegerField(default=0, column_name='m_neutron')
     ceilometer = IntegerField(default=0, column_name='m_ceilometer')
-    ceph = IntegerField(default=0, column_name='m_ceph')
+    #ceph = IntegerField(default=0, column_name='m_ceph')
 
     class Meta:
         database = LinkMetering.DATABASE
+        table_name = 'link_usage'
 
     def __init__(self, interface='', type=MonitoringModule.TRAFFIC_OUTBOUND, services=LinkMetering.MAP.keys(),
                  service_port_map=DictTools.invert(LinkMetering.MAP), interval=LinkMetering.DEFAULT_INTERVAL, **kwargs):
