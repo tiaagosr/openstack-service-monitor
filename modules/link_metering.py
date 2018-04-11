@@ -175,9 +175,6 @@ class LinkMeteringPersistence(Thread):
         self.lock = None
         self.interval = None
 
-    def _etc_port_data(self, cursor, traffic_type):
-        fields = ['m_etc', 'etc_ports', 'time', 'type']
-
     def timed_storage(self, buffer, interval, lock, stop_event):
         self.buffer = buffer
         self.lock = lock
