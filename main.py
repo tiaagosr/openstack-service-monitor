@@ -67,7 +67,6 @@ class UseCase:
 if __name__ == '__main__':
     args = parser.parse_args()
     if args.module == 'monitor':
-        print(args.ip_mode)
         ip_mode = mode_map[args.ip_mode[0]]
         #Monitoring Modules
         if 'bandwidth' in args.monitors:

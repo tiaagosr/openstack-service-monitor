@@ -9,12 +9,23 @@ import time
 
 
 class SniffThread(Thread):
+
+    INSTANCE = None
+
+    @staticmethod
+    def instance(shared_queue: Queue,):
+        pass
+
     def __init__(self, shared_queue: Queue, stop_event, filter='', iface=''):
         super().__init__()
         self.queue = shared_queue
         self.stopped = stop_event
         self.filter = filter
         self.iface = iface
+        self.INSTANCE = self
+
+    def add_module_queue(self):
+        pass
 
     def run(self):
         while not self.stopped.is_set():
