@@ -1,11 +1,12 @@
 from threading import Thread, Event, Lock
+
+from peewee import *
+from playhouse.sqlite_ext import JSONField
 from scapy.all import IP, Packet, sniff, TCP
-from queue import Queue
-from database import DBSession
 from modules.definitions import MonitoringModule, DictTools
 import json
 
-# Inbound and Outbound: self.metering_result
+
 class LinkMetering(MonitoringModule):
     MAP = {
         'nova': set([5900, 6080, 6081, 6082, 8773, 8774, 8775] + list(range(5900, 5999))),
@@ -18,6 +19,8 @@ class LinkMetering(MonitoringModule):
         'ceph': {6800, 7300}
     }
 
+    SERVICES = MAP.keys()
+
     DEFAULT_INTERVAL = 10
 
     def __init__(self, db_path, iface='wlp2s0', sniff_filter='tcp', interval=DEFAULT_INTERVAL, mode=MonitoringModule.MODE_IPV4):
@@ -25,11 +28,18 @@ class LinkMetering(MonitoringModule):
         self.aux_thread_interval = interval
         self.port_mapping = DictTools.invert(LinkMetering.MAP)
         self.services = LinkMetering.MAP.keys()
-        self.buffer_params = {'iface': self.sniff_iface, 'services': self.services, 'interval': self.aux_thread_interval, 'service_port_map': self.port_mapping}
-        tmp_buffer = self._setup_buffer()
-        self.buffer = {MonitoringModule.TRAFFIC_INBOUND: tmp_buffer[0], MonitoringModule.TRAFFIC_OUTBOUND: tmp_buffer[1]}
-        self.persistence = LinkMeteringPersistence(list(self.services), db_path)
+        self.buffer_params = {'interface': self.sniff_iface, 'services': self.services, 'interval': self.aux_thread_interval, 'service_port_map': self.port_mapping}
+        self.buffer = {}
+        self.init_db(db_path)
+        self.persistence = LinkMeteringPersistence()
         self.buffer_lock = Lock()
+
+    @staticmethod
+    def init_db(path, create_tables=True):
+        LinkMetering.DATABASE.init(path)
+        LinkMetering.DATABASE.connect()
+        if create_tables:
+            LinkMetering.DATABASE.create_tables([MeteringData])
 
     def measure_packet(self, packet):
         port, traffic_type = self.classify_packet(packet, self.port_mapping, self.iface_ip)
@@ -47,27 +57,21 @@ class LinkMetering(MonitoringModule):
         else:
             buffer.ignored_count += 1
 
-    def _setup_buffer(self):
+    def create_buffer(self):
         inbound_buffer = MeteringData(type=MonitoringModule.TRAFFIC_INBOUND, **self.buffer_params)
         outbound_buffer = MeteringData(type=MonitoringModule.TRAFFIC_OUTBOUND, **self.buffer_params)
-        return inbound_buffer, outbound_buffer
-
-    def calculate_usage(self):
-        while not self.stopped.is_set():
-            if not self.queue.empty():
-                with self.buffer_lock:
-                    if len(self.buffer) == 0:
-                        tmp_buffer = self._setup_buffer()
-                        self.buffer[MonitoringModule.TRAFFIC_INBOUND] = tmp_buffer[0]
-                        self.buffer[MonitoringModule.TRAFFIC_OUTBOUND] = tmp_buffer[1]
-                    packet = self.queue.get()
-                    self.measure_packet(packet)
-        #Consumer Thread stopped > Stop persistence
-        self.persistence.stop_execution()
+        return (MonitoringModule.TRAFFIC_INBOUND, inbound_buffer), (MonitoringModule.TRAFFIC_OUTBOUND, outbound_buffer)
 
     def run(self):
-        self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.buffer_lock)
-        self.calculate_usage()
+        self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.buffer_lock, self.stopped)
+        while not self.stopped.is_set():
+            if not self.queue.empty():
+                packet = self.queue.get()
+                with self.buffer_lock:
+                    if not self.buffer:
+                        self.buffer.update(self.create_buffer())
+                    self.measure_packet(packet)
+        #Consumer Thread stopped > Stop persistence
 
     def start_monitoring(self):
         print("Metering link usage, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)
@@ -75,37 +79,52 @@ class LinkMetering(MonitoringModule):
         self.start()
 
 
-class MeteringData:
-    def __init__(self, iface='', type=MonitoringModule.TRAFFIC_OUTBOUND, services=LinkMetering.MAP.keys(), service_port_map=DictTools.invert(LinkMetering.MAP), interval=LinkMetering.DEFAULT_INTERVAL):
-        self.iface = iface
-        self.type = type
+class MeteringData(Model):
+    interface = CharField()
+    type = CharField()
+    time = TimeField(formats='%H:%M:%S')
+    ignored_count = IntegerField(default=0)
+    etc_ports = JSONField(default={})
+    etc = IntegerField(default=0, column_name='m_etc')
+    nova = IntegerField(default=0, column_name='m_nova')
+    keystone = IntegerField(default=0, column_name='m_keystone')
+    swift = IntegerField(default=0, column_name='m_swift')
+    glance = IntegerField(default=0, column_name='m_glance')
+    cinder = IntegerField(default=0, column_name='m_cinder')
+    neutron = IntegerField(default=0, column_name='m_neutron')
+    ceilometer = IntegerField(default=0, column_name='m_ceilometer')
+    ceph = IntegerField(default=0, column_name='m_ceph')
+
+    class Meta:
+        database = LinkMetering.DATABASE
+
+    def __init__(self, interface='', type=MonitoringModule.TRAFFIC_OUTBOUND, services=LinkMetering.MAP.keys(),
+                 service_port_map=DictTools.invert(LinkMetering.MAP), interval=LinkMetering.DEFAULT_INTERVAL, **kwargs):
+        super(MeteringData, self).__init__(interface=interface, type=type, **kwargs)
         self.map = service_port_map
         self.interval = interval
-        self.time = None
-        self.ignored_count = 0
-        self.services = self.init_services(services)
+        self.services = services
+        self.init_services(services)
         self.port_buffer = {}
         self.etc_port_buffer = {}
-        self.etc_ports = []
 
     def __getitem__(self, item):
-        if item == 'etc':
-            return self.services['etc']
+        if item in self.services or item == 'etc':
+            return getattr(self, item, 0)
         if not isinstance(item, int):
-            raise TypeError('Metering port must be int or str("etc")')
+            raise TypeError('Metering index must be int (Port) or str (Service)')
         return self.port_buffer.get(item, 0)
 
     def __setitem__(self, key, value):
-        if key == 'etc':
-            self.services['etc'] = value
+        if key in self.services or key == 'etc':
+            return setattr(self, key, value)
         if not isinstance(key, int):
-            raise TypeError('Metering port must be int or str("etc")')
+            raise TypeError('Metering index must be int (Port) or str (Service)')
         self.port_buffer[key] = value
 
     def init_services(self, service_list):
-        services = {x: 0 for x in service_list}
-        services['etc'] = 0
-        return services
+        map(lambda x: setattr(self, x, 0), service_list)
+        self.etc = 0
 
     def calculate_metering(self):
         for port in self.port_buffer:
@@ -116,9 +135,9 @@ class MeteringData:
 
     def port_calculation(self, port, service, usage):
         # uncategorized port
-        if service == 'etc' and not MeteringData.is_ephemeral(port):
+        if service == 'etc' and not self.is_ephemeral(port):
             self.etc_port_buffer[port] = usage
-        self.services[service] += usage
+        self[service] += usage
 
     def classify_port(self, port):
         if port in self.map:
@@ -134,101 +153,36 @@ class MeteringData:
         self.etc_ports = sorted(top_ports, key=lambda x: x['value'], reverse=True)[:max_position]
 
     def content(self):
-        attrs = {'iface': self.iface, 'type': self.type, 'time': self.time, 'ignored_count': self.ignored_count, 'etc_ports': json.dumps(self.etc_ports)}
-        return {**attrs, **self.services}
+        services = {x: getattr(self, x, 0) for x in self.services}
+        attrs = {'interface': self.interface, 'type': self.type, 'time': self.time, 'ignored_count': self.ignored_count, 'etc_ports': json.dumps(self.etc_ports), 'etc': self.etc}
+        return {**attrs, **services}
 
     def __str__(self):
-        return self.content()
+        return str(self.content())
+
+    def save(self, force_insert=False, only=None):
+        self.calculate_metering()
+        self._sort_etc_ports()
+        super(MeteringData, self).save(force_insert, only)
 
 
 class LinkMeteringPersistence(Thread):
-    def __init__(self, services=['etc'], dbpath=':memory:'):
+    def __init__(self):
         super().__init__()
-        self.db = DBSession(dbpath)
-        self.services = services
-        self.persist_query = ''
-        # Thread attributes
         self.stopped = None
         self.buffer = None
         self.lock = None
         self.interval = None
 
-    def _generate_metering_query(self, fields: list, traffic_type=None) -> str:
-        query = 'SELECT '
-        first = True
-        # Generate query based on service list
-        for f in fields:
-            if first:
-                first = False
-                query += f
-            else:
-                query += ', '+f
-        query += ' FROM link_usage'
-        if traffic_type is not None:
-            query += ' where type="{type}"'.format(type=traffic_type)
-        query += ' ORDER BY id'
-        return query
-
-    def service_data(self, traffic_type=None):
-        self.db.wrap_access(self._service_data, traffic_type)
-
-    def _service_data(self, cursor, traffic_type=None):
-        fields = ['time']
-        for service in self.services:
-            fields.append('m_'+service)
-        query = self._generate_metering_query(fields, traffic_type)
-        cursor.execute(query)
-        return cursor.fetchall()
-
-    def etc_port_data(self, traffic_type=None):
-        self.db.wrap_access(self._etc_port_data, traffic_type)
-
     def _etc_port_data(self, cursor, traffic_type):
         fields = ['m_etc', 'etc_ports', 'time', 'type']
-        query = self._generate_metering_query(fields, traffic_type)
-        cursor.execute(query)
-        return cursor.fetchall()
 
-    def persist_result(self, result: MeteringData):
-        self.db.wrap_access(self._persist_result, result)
-
-    def _persist_result(self, cursor, result: MeteringData):
-        query = str(self.persist_query).format(**result.content())
-        cursor.execute(query)
-
-    def stop_execution(self):
-        self.stopped.set()
-
-    def _generate_table(self, cursor):
-        query = 'CREATE TABLE IF NOT EXISTS link_usage(id INTEGER PRIMARY KEY, type VARCHAR(5), interface VARCHAR(40), etc_ports TEXT, ignored_count INTEGER, time DATE, m_etc INTEGER'
-        # Generate query based on service list
-        for service in self.services:
-            query += ', m_'+service+' INTEGER'
-        query += ')'
-        cursor.execute(query)
-
-    def _generate_persist_query(self):
-        query = 'INSERT INTO link_usage ('
-        fields = 'interface, type, time, ignored_count, etc_ports, m_etc'
-        values = '''"{iface}", "{type}", time({time}, "unixepoch"), "{ignored_count}", '{etc_ports}', "{etc}"'''
-        for service in self.services:
-            fields += ', m_'+service
-            values += ', "{'+service+'}"'
-        query += fields+') VALUES ('+values+')'
-        return query
-
-    def init_persistance(self):
-        self.db.create_conn()
-        self.db.wrap_access(self._generate_table)
-        self.persist_query = self._generate_persist_query()
-
-    def timed_storage(self, buffer, interval, lock):
+    def timed_storage(self, buffer, interval, lock, stop_event):
         self.buffer = buffer
         self.lock = lock
         self.interval = interval
-        self.stopped = Event()
-        self.init_persistance()
-        self.run()
+        self.stopped = stop_event
+        self.start()
 
     def run(self):
         while not self.stopped.wait(self.interval):
@@ -236,6 +190,6 @@ class LinkMeteringPersistence(Thread):
             with self.lock:
                 for item in self.buffer:
                     self.buffer[item].time = time
-                    self.buffer[item].calculate_metering()
-                    self.persist_result(self.buffer[item])
+                    self.buffer[item].save()
+                    print(self.buffer[item])
                 self.buffer.clear()

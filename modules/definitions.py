@@ -1,4 +1,6 @@
 from threading import Thread, Event
+
+from peewee import SqliteDatabase
 from scapy.all import sniff, Packet, TCP, IP, IPv6
 from queue import Queue
 import os
@@ -6,20 +8,19 @@ import time
 
 
 class SniffThread(Thread):
-    def __init__(self, shared_queue: Queue, filter='', iface=''):
+    def __init__(self, shared_queue: Queue, stop_event, filter='', iface=''):
         super().__init__()
         self.queue = shared_queue
-        self.stopped = Event()
+        self.stopped = stop_event
         self.filter = filter
         self.iface = iface
 
     def run(self):
-        while not self.stopped.is_set() and not self.queue.full():
-            data = sniff(iface=self.iface, filter=self.filter, count=1)
-            [self.queue.put(item) for item in data]
-
-    def stop_execution(self):
-        self.stopped.set()
+        while not self.stopped.is_set():
+            if not self.queue.full():
+                data = sniff(iface=self.iface, filter=self.filter, count=1)
+                [self.queue.put(item) for item in data]
+                print(self.queue.qsize())
 
 
 class MonitoringModule(Thread):
@@ -29,6 +30,7 @@ class MonitoringModule(Thread):
     TRAFFIC_INBOUND = 'in'
     QUEUE_SIZE = 1000
     START_TIME = time.time()
+    DATABASE = SqliteDatabase(None)
 
     def __init__(self, iface='lo', filter='tcp', mode=MODE_IPV4):
         super().__init__()
@@ -58,7 +60,7 @@ class MonitoringModule(Thread):
         return os.popen(cmd).read().split(split)[1].split("/")[0]
     
     def start_sniffing(self):
-        self.sniff_thread = SniffThread(self.queue, iface=self.sniff_iface, filter=self.sniff_filter)
+        self.sniff_thread = SniffThread(self.queue, self.stopped, iface=self.sniff_iface, filter=self.sniff_filter)
         self.sniff_thread.start()
 
     def stop_execution(self):
