@@ -192,9 +192,10 @@ class LinkMeteringPersistence(Thread):
     def run(self):
         while not self.stopped.wait(self.interval):
             time = MonitoringModule.execution_time()
-            with self.lock:
-                for item in self.buffer:
-                    self.buffer[item].time = time
-                    self.buffer[item].save()
-                    print(self.buffer[item])
-                self.buffer.clear()
+            self.lock.acquire()
+            for item in self.buffer:
+                self.buffer[item].time = time
+                self.buffer[item].save()
+                print(self.buffer[item])
+            self.buffer.clear()
+            self.lock.release()
