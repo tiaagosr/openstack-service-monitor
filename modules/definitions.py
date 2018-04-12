@@ -36,8 +36,7 @@ class SniffThread(Thread):
 
     def store_packet(self, packet):
         if not self.queue[0].full():
-            for q in self.queue:
-                q.put(packet)
+            self.queue[0].put(packet)
 
     def run(self):
         sniff(iface=self.iface, filter=self.filter, store=0, prn=self.store_packet)
