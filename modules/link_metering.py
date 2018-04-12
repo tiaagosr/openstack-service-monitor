@@ -65,7 +65,6 @@ class LinkMetering(MonitoringModule):
 
     def run(self):
         self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.buffer_lock, self.stopped)
-        #Retain lock for the next 10000 items
         got_lock = False
         while not self.stopped.is_set():
             if not self.queue.empty():

@@ -34,13 +34,14 @@ class SniffThread(Thread):
             return True
         return False
 
+    def store_packet(self, packet):
+        if not self.queue[0].full():
+            for q in self.queue:
+                q.put(packet)
+
     def run(self):
-        while not self.stopped.is_set():
-            if not self.queue[0].full():
-                data = sniff(iface=self.iface, filter=self.filter, count=1000)
-                for item in data:
-                    for q in self.queue:
-                        q.put(item)
+        sniff(iface=self.iface, filter=self.filter, store=0, prn=self.store_packet)
+
 
 
 class MonitoringModule(Thread):
