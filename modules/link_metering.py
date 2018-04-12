@@ -68,7 +68,9 @@ class LinkMetering(MonitoringModule):
         #Retain lock for the next 10000 items
         while not self.stopped.is_set():
             if not self.queue.empty():
-                self.buffer_lock.acquire()
+                if not self.buffer_lock.locked():
+                    self.buffer_lock.acquire()
+                    print("lock acquired!")
                 packet = self.queue.get()
                 if not self.buffer:
                     self.buffer.update(self.create_buffer())
