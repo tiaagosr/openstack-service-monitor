@@ -19,8 +19,6 @@ subparser = parser.add_subparsers(title='Modules', dest='module')
 monitor = subparser.add_parser('monitor', help='Execute monitoring modules')
 mode_map = {'IPv4': MonitoringModule.MODE_IPV4, 'IPv6': MonitoringModule.MODE_IPV6}
 monitor.add_argument('-m', '--modules', nargs='+', dest='monitors', help='Select modules to execute\nbandwidth: Monitor control network bandwidth usage\napi: Log api calls', type=str, choices=['bandwidth', 'api'], default=['bandwidth'])
-#monitor.add_argument('bandwidth', required=False, help='Monitor control network bandwidth usage')
-#monitor.add_argument('api', required=False, help='Log api calls')
 monitor.add_argument('-i', '--interface', dest='iface', help='Interface monitored (Control Network) by monitoring modules', type=str, nargs=1, default=current_interface)
 monitor.add_argument('-im', '--ip_mode', dest='ip_mode', help='IP Mode: IPv4, IPv6', type=str, nargs=1, default='IPv4', choices=mode_map, metavar='IP_MODE')
 

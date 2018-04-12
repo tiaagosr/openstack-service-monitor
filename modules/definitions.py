@@ -13,30 +13,39 @@ class SniffThread(Thread):
     INSTANCE = None
 
     @staticmethod
-    def instance(shared_queue: Queue,):
-        pass
+    def instance(iface='', filter=''):
+        if SniffThread.INSTANCE is None:
+            SniffThread.INSTANCE = SniffThread(iface=iface, filter=filter)
+        return SniffThread.INSTANCE
 
-    def __init__(self, shared_queue: Queue, stop_event, filter='', iface=''):
+    def __init__(self, filter='', iface=''):
         super().__init__()
-        self.queue = shared_queue
-        self.stopped = stop_event
+        self.queue = []
+        self.stopped = None
         self.filter = filter
         self.iface = iface
         self.INSTANCE = self
 
-    def add_module_queue(self):
-        pass
+    def start_sniffing(self, shared_queue: Queue, stop_event: Event) -> bool:
+        self.queue.append(shared_queue)
+        if self.stopped is None:
+            self.stopped = stop_event
+            self.start()
+            return True
+        return False
 
     def run(self):
         while not self.stopped.is_set():
-            if not self.queue.full():
+            if not self.queue[0].full():
                 data = sniff(iface=self.iface, filter=self.filter, count=10)
-                [self.queue.put(item) for item in data]
+                for item in data:
+                    for q in self.queue:
+                        q.put(item)
 
 
 class MonitoringModule(Thread):
-    MODE_IPV4 = 0
-    MODE_IPV6 = 1
+    MODE_IPV4 = 'inet'
+    MODE_IPV6 = 'inet6'
     TRAFFIC_OUTBOUND = 'out'
     TRAFFIC_INBOUND = 'in'
     QUEUE_SIZE = 1000
@@ -62,17 +71,15 @@ class MonitoringModule(Thread):
     def execution_time() -> int:
         return round(time.time() - MonitoringModule.START_TIME)
 
-    def iface_ip(self, iface: str, mode=MODE_IPV4) -> str:
+    @staticmethod
+    def iface_ip(iface: str, mode=MODE_IPV4) -> str:
         cmd = 'ip addr show '+iface
-        if mode == MonitoringModule.MODE_IPV6:
-            split = "inet6 "
-        else:
-            split = "inet "
+        split = mode + ' '
         return os.popen(cmd).read().split(split)[1].split("/")[0]
     
     def start_sniffing(self):
-        self.sniff_thread = SniffThread(self.queue, self.stopped, iface=self.sniff_iface, filter=self.sniff_filter)
-        self.sniff_thread.start()
+        self.sniff_thread = SniffThread.instance(iface=self.sniff_iface, filter=self.sniff_filter)
+        self.sniff_thread.start_sniffing(self.queue, self.stopped)
 
     def stop_execution(self):
         self.stopped.set()
