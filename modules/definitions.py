@@ -39,7 +39,7 @@ class SniffThread(Thread):
             self.queue[0].put(packet)
 
     def run(self):
-        sniff(iface=self.iface, filter=self.filter, store=0, prn=self.store_packet)
+        sniff(iface=self.iface, filter='tcp', store=0, prn=self.store_packet)
 
 
 
