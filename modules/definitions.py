@@ -1,4 +1,4 @@
-from threading import Thread, Event
+from threading import Thread, Event, curre
 from peewee import SqliteDatabase
 import logging
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
@@ -25,6 +25,7 @@ class SniffThread(Thread):
         self.filter = filter
         self.iface = iface
         self.INSTANCE = self
+        print("sniffer: "+self.name)
 
     def start_sniffing(self, shared_queue: Queue, stop_event: Event) -> bool:
         self.queue.append(shared_queue)
