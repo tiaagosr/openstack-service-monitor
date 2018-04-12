@@ -37,7 +37,7 @@ class SniffThread(Thread):
     def run(self):
         while not self.stopped.is_set():
             if not self.queue[0].full():
-                data = sniff(iface=self.iface, filter=self.filter, count=10)
+                data = sniff(iface=self.iface, filter=self.filter, count=100)
                 for item in data:
                     for q in self.queue:
                         q.put(item)
@@ -48,7 +48,7 @@ class MonitoringModule(Thread):
     MODE_IPV6 = 'inet6'
     TRAFFIC_OUTBOUND = 'out'
     TRAFFIC_INBOUND = 'in'
-    QUEUE_SIZE = 1000
+    QUEUE_SIZE = 100000
     START_TIME = time.time()
     DATABASE = SqliteDatabase(None)
 
