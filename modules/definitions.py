@@ -19,13 +19,13 @@ class SniffThread(Thread):
         return SniffThread.INSTANCE
 
     def __init__(self, filter='', iface=''):
-        super().__init__()
+        super().__init__(name="osm-sniffer")
         self.queue = []
         self.stopped = None
         self.filter = filter
         self.iface = iface
         self.INSTANCE = self
-        print("sniffer: "+self.name)
+        print("sniffer: "+self.get)
 
     def start_sniffing(self, shared_queue: Queue, stop_event: Event) -> bool:
         self.queue.append(shared_queue)
