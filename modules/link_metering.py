@@ -6,6 +6,7 @@ from playhouse.sqlite_ext import JSONField
 from scapy.all import Packet
 from modules.definitions import MonitoringModule, DictTools
 import json
+import time
 
 
 class LinkMetering(MonitoringModule):
@@ -75,9 +76,11 @@ class LinkMetering(MonitoringModule):
                 if not self.buffer:
                     self.buffer.update(self.create_buffer())
                 self.measure_packet(packet)
-            elif got_lock:
-                self.buffer_lock.release()
-                got_lock = False
+            else:
+                if got_lock:
+                    self.buffer_lock.release()
+                    got_lock = False
+                time.sleep(0.001)
         #Consumer Thread stopped > Stop persistence
 
     def start_monitoring(self):

@@ -42,7 +42,6 @@ class SniffThread(Thread):
         sniff(iface=self.iface, filter='tcp', store=0, prn=self.store_packet)
 
 
-
 class MonitoringModule(Thread):
     MODE_IPV4 = 'inet'
     MODE_IPV6 = 'inet6'
