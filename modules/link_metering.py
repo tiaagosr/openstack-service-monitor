@@ -74,6 +74,7 @@ class LinkMetering(MonitoringModule):
                     self.buffer.update(self.create_buffer())
                 self.measure_packet(packet)
             elif self.buffer_lock.locked():
+                print(self.queue.qsize())
                 self.buffer_lock.release()
         #Consumer Thread stopped > Stop persistence
 
