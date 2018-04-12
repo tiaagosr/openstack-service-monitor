@@ -110,7 +110,7 @@ class MeteringData(Model):
         table_name = 'link_usage'
 
     def __init__(self, interface='', type=MonitoringModule.TRAFFIC_OUTBOUND, services=LinkMetering.MAP.keys(),
-                 service_port_map=DictTools.invert(LinkMetering.MAP), interval=LinkMetering.DEFAULT_INTERVAL, **kwargs):
+                 service_port_map=DictTools.invert(LinkMetering.MAP), interval=LinkMetering.DEFAULT_INTERVAL):
         super(MeteringData, self).__init__(interface=interface, type=type, **kwargs)
         self.map = service_port_map
         self.interval = interval
