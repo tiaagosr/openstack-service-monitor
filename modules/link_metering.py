@@ -25,7 +25,7 @@ class LinkMetering(MonitoringModule):
 
     DEFAULT_INTERVAL = 10
 
-    def __init__(self, db_path, iface='wlp2s0', sniff_filter='tcp', interval=DEFAULT_INTERVAL, mode=MonitoringModule.MODE_IPV4, **extraargs):
+    def __init__(self, db_path, iface='wlp2s0', sniff_filter='tcp', interval=DEFAULT_INTERVAL, mode=MonitoringModule.MODE_IPV4):
         super().__init__(iface, sniff_filter, mode)
         self.aux_thread_interval = interval
         self.port_mapping = DictTools.invert(LinkMetering.MAP)
@@ -110,7 +110,7 @@ class MeteringData(Model):
         table_name = 'link_usage'
 
     def __init__(self, interface='', type=MonitoringModule.TRAFFIC_OUTBOUND, services=LinkMetering.MAP.keys(),
-                 service_port_map=DictTools.invert(LinkMetering.MAP), interval=LinkMetering.DEFAULT_INTERVAL):
+                 service_port_map=DictTools.invert(LinkMetering.MAP), interval=LinkMetering.DEFAULT_INTERVAL, **kwargs):
         super(MeteringData, self).__init__(interface=interface, type=type, **kwargs)
         self.map = service_port_map
         self.interval = interval

@@ -64,10 +64,10 @@ class MonitoringModule(Thread):
     START_TIME = time.time()
     DATABASE = SqliteDatabase(None)
 
-    def __init__(self, iface='lo', filter='tcp', mode=MODE_IPV4):
+    def __init__(self, interface='lo', filter='tcp', mode=MODE_IPV4):
         super().__init__()
         self.stopped = Event()
-        self.sniff_iface = iface
+        self.sniff_iface = interface
         self.sniff_filter = filter
         self.sniff_thread = None
         self.queue = Queue(MonitoringModule.QUEUE_SIZE)
@@ -77,7 +77,7 @@ class MonitoringModule(Thread):
             self.ip_layer = IP
         else:
             self.ip_layer = IPv6
-        self.iface_ip = self.iface_ip(iface, mode)
+        self.iface_ip = self.iface_ip(interface, mode)
 
     @staticmethod
     def execution_time() -> int:
