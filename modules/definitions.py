@@ -1,4 +1,4 @@
-from threading import Thread, Event, curre
+from threading import Thread, Event
 from peewee import SqliteDatabase
 import logging
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
