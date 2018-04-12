@@ -71,13 +71,11 @@ class LinkMetering(MonitoringModule):
                 if not self.buffer_lock.locked():
                     self.buffer_lock.acquire()
                     got_lock = True
-                    print("lock acquired!")
                 packet = self.queue.get()
                 if not self.buffer:
                     self.buffer.update(self.create_buffer())
                 self.measure_packet(packet)
             elif got_lock:
-                print(self.queue.qsize())
                 self.buffer_lock.release()
                 got_lock = False
         #Consumer Thread stopped > Stop persistence
