@@ -66,22 +66,15 @@ class LinkMetering(MonitoringModule):
     def run(self):
         self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.buffer_lock, self.stopped)
         #Retain lock for the next 10000 items
-        i = 0
         while not self.stopped.is_set():
             if not self.queue.empty():
-                if i == 0:
-                    self.buffer_lock.acquire()
-                if i >= 10000:
-                    self.buffer_lock.release()
-                    i = 0
+                self.buffer_lock.acquire()
                 packet = self.queue.get()
                 if not self.buffer:
                     self.buffer.update(self.create_buffer())
                 self.measure_packet(packet)
-                i += 1
-            elif i > 0:
+            elif self.buffer_lock.locked():
                 self.buffer_lock.release()
-                i = 0
         #Consumer Thread stopped > Stop persistence
 
     def start_monitoring(self):
