@@ -41,6 +41,9 @@ class SniffThread(Thread):
                 for item in data:
                     for q in self.queue:
                         q.put(item)
+            else:
+                # Reduce CPU % Usage
+                time.sleep(0.001)
 
 
     def store_packet(self, packet):
@@ -87,7 +90,7 @@ class MonitoringModule(Thread):
         return os.popen(cmd).read().split(split)[1].split("/")[0]
     
     def start_sniffing(self):
-        self.sniff_thread = SniffThread.instance(iface=self.sniff_iface, filter=self.sniff_filter)
+        self.sniff_thread = SniffThread.instance(iface=self.sniff_iface, filter='')
         self.sniff_thread.start_sniffing(self.queue, self.stopped)
 
     def stop_execution(self):

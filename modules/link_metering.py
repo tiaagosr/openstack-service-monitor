@@ -18,14 +18,14 @@ class LinkMetering(MonitoringModule):
         'cinder': {3260, 8776},
         'neutron': {9696},
         'ceilometer': {8777},
-        #'ceph': {6800, 7300}
+        'ceph': {6800, 7300}
     }
 
     SERVICES = MAP.keys()
 
     DEFAULT_INTERVAL = 10
 
-    def __init__(self, db_path, iface='wlp2s0', sniff_filter='tcp', interval=DEFAULT_INTERVAL, mode=MonitoringModule.MODE_IPV4):
+    def __init__(self, db_path, iface='wlp2s0', sniff_filter='tcp', interval=DEFAULT_INTERVAL, mode=MonitoringModule.MODE_IPV4, **extraargs):
         super().__init__(iface, sniff_filter, mode)
         self.aux_thread_interval = interval
         self.port_mapping = DictTools.invert(LinkMetering.MAP)
@@ -80,8 +80,8 @@ class LinkMetering(MonitoringModule):
                 if got_lock:
                     self.buffer_lock.release()
                     got_lock = False
+                # Reduce CPU % Usage
                 time.sleep(0.001)
-        #Consumer Thread stopped > Stop persistence
 
     def start_monitoring(self):
         print("Metering link usage, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)
@@ -103,7 +103,7 @@ class MeteringData(Model):
     cinder = IntegerField(default=0, column_name='m_cinder')
     neutron = IntegerField(default=0, column_name='m_neutron')
     ceilometer = IntegerField(default=0, column_name='m_ceilometer')
-    #ceph = IntegerField(default=0, column_name='m_ceph')
+    ceph = IntegerField(default=0, column_name='m_ceph')
 
     class Meta:
         database = LinkMetering.DATABASE
