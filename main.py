@@ -30,7 +30,7 @@ bandwidth.add_argument('-w', '--write-pcap', dest='pcap', help='Path to output p
 api_log = monitor.add_argument_group('Api logging')
 
 scenario = monitor.add_argument_group('Scenario')
-scenario.add_argument('-sc', '--execute-scenario', dest='use_scenario', help='Execute simple use scenario during monitoring')
+scenario.add_argument('-sc', '--execute-scenario', action='store_true', dest='use_scenario', help='Execute simple use scenario during monitoring')
 scenario.add_argument('-vm', '--vm-count', dest='vm_count', help='Number of vms instance created through the scenario execution', type=int, default=1, nargs=1)
 scenario.add_argument('-sl', '--state-list', dest='state_list', help='Ordered state list which vm instances will cycle through the scenarion execution', nargs="+", choices=['suspend', 'resume', 'reboot', 'shelve', 'stop'], default=['suspend', 'resume', 'stop', 'shelve'], metavar='\b')
 
