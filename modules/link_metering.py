@@ -190,6 +190,7 @@ class LinkMeteringPersistence(Thread):
         self.interval = None
         self.buffer_reset = None
         self.buffer_context = None
+        self.duration = -1
 
     def timed_storage(self, buffer, interval, stop_event, buffer_reset, duration=-1):
         self.buffer = buffer
@@ -209,7 +210,7 @@ class LinkMeteringPersistence(Thread):
             for item in buffer:
                 buffer[item].time = exec_time
                 buffer[item].save()
-                print(buffer[item])
+                #print(buffer[item])
             buffer.clear()
 
             if 0 < self.duration < exec_time:
