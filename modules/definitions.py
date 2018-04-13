@@ -46,14 +46,13 @@ class SniffThread(Thread):
                 time.sleep(0.001)
         print("Producer Thread Stopped!")
 
-
     def store_packet(self, packet):
         if not self.queue[0].full():
             self.queue[0].put(packet)
 
     def run(self):
-        self.loop_sniff()
-        #sniff(iface=self.iface, filter='tcp', store=0, prn=self.store_packet)
+        #self.loop_sniff()
+        sniff(iface=self.iface, filter='', store=0, prn=self.store_packet)
 
 
 class MonitoringModule(Thread):
