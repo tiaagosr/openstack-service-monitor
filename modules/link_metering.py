@@ -33,10 +33,10 @@ class LinkMetering(MonitoringModule):
         self.port_mapping = DictTools.invert(LinkMetering.MAP)
         self.services = LinkMetering.MAP.keys()
         self.buffer_params = {'interface': self.sniff_iface, 'services': self.services, 'interval': self.aux_thread_interval, 'service_port_map': self.port_mapping}
-        self.buffer = {}
+        self.buffer = None
+        self.reset_buffer()
         self.init_db(db_path)
         self.persistence = LinkMeteringPersistence()
-        self.buffer_lock = Lock()
         self.pcap = pcap
 
     @staticmethod
@@ -62,13 +62,15 @@ class LinkMetering(MonitoringModule):
         else:
             buffer.ignored_count += 1
 
-    def create_buffer(self):
+    def reset_buffer(self):
         inbound_buffer = MeteringData(type=MonitoringModule.TRAFFIC_INBOUND, **self.buffer_params)
         outbound_buffer = MeteringData(type=MonitoringModule.TRAFFIC_OUTBOUND, **self.buffer_params)
-        return (MonitoringModule.TRAFFIC_INBOUND, inbound_buffer), (MonitoringModule.TRAFFIC_OUTBOUND, outbound_buffer)
+        self.buffer = {MonitoringModule.TRAFFIC_INBOUND: inbound_buffer,
+                       MonitoringModule.TRAFFIC_OUTBOUND: outbound_buffer}
+        return self.buffer
 
     def run(self):
-        self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.buffer_lock, self.stopped)
+        self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.stopped, self.reset_buffer)
         pcap = None
         # Dynamic Context, open file
         with ExitStack() as stack:
@@ -76,19 +78,15 @@ class LinkMetering(MonitoringModule):
                 pcap = stack.enter_context(PcapWriter(self.pcap))
             while not self.stopped.is_set():
                 if not self.queue.empty():
-                    if not self.buffer_lock.locked():
-                        self.buffer_lock.acquire(timeout=1)
                     packet = self.queue.get()
                     # Write to pcap file if provided path
                     if pcap is not None:
                         pcap.write(packet)
-                    # Empty Buffer
-                    if not self.buffer:
-                        self.buffer.update(self.create_buffer())
                     self.measure_packet(packet)
                 else:
                     # Reduce CPU % Usage
                     time.sleep(0.001)
+            print("Consumer Thread Stopped!")
 
     def start_monitoring(self):
         print("Metering link usage, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)
@@ -189,12 +187,14 @@ class LinkMeteringPersistence(Thread):
         super().__init__()
         self.stopped = None
         self.buffer = None
-        self.lock = None
         self.interval = None
+        self.buffer_reset = None
+        self.buffer_context = None
 
-    def timed_storage(self, buffer, interval, lock, stop_event):
+    def timed_storage(self, buffer, interval, stop_event, buffer_reset, duration=-1):
         self.buffer = buffer
-        self.lock = lock
+        self.duration = duration
+        self.buffer_reset = buffer_reset
         self.interval = interval
         self.stopped = stop_event
         self.start()
@@ -202,10 +202,16 @@ class LinkMeteringPersistence(Thread):
     def run(self):
         while not self.stopped.wait(self.interval):
             exec_time = MonitoringModule.execution_time()
-            self.lock.acquire()
-            for item in self.buffer:
-                self.buffer[item].time = exec_time
-                self.buffer[item].save()
-                print(self.buffer[item])
-            self.buffer.clear()
-            self.lock.release()
+
+            buffer = self.buffer
+            self.buffer = self.buffer_reset()
+
+            for item in buffer:
+                buffer[item].time = exec_time
+                buffer[item].save()
+                print(buffer[item])
+            buffer.clear()
+
+            if 0 < self.duration < exec_time:
+                print("Stop execution!")
+                self.stopped.set()

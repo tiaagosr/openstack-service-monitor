@@ -25,7 +25,7 @@ monitor.add_argument('-im', '--ip_mode', dest='ip_mode', help='IP Mode: IPv4, IP
 
 bandwidth = monitor.add_argument_group('Bandwidth')
 bandwidth.add_argument('-t', '--interval', dest='interval', help='Monitored bandwidth logging interval', type=int, nargs=1, default=5)
-bandwidth.add_argument('-w', '--write-pcap', dest='pcap', help='Path to output pcap file', type=str, nargs=1, default=None)
+bandwidth.add_argument('-w', '--write-pcap', dest='pcap', help='Path to output pcap file', type=str, nargs=1, default='')
 
 api_log = monitor.add_argument_group('Api logging')
 
@@ -49,6 +49,7 @@ class UseCase:
     def monitor_link(db_path=db_file, **kwargs):
         link_metering = LinkMetering(db_path=db_path, **kwargs)
         link_metering.start_monitoring()
+        return link_metering
 
     @staticmethod
     def metering_plot(plot_type=DataPlotting.PLOT_PIE, categorized=True, traffic_type=None, services=None, pcap=None):
@@ -67,15 +68,19 @@ class UseCase:
 if __name__ == '__main__':
     args = parser.parse_args()
     if args.module == 'monitor':
-        ip_mode = mode_map[args.ip_mode[0]]
+        monitor_bandwidth = None
+        ip_mode = mode_map[args.ip_mode]
         #Monitoring Modules
         if 'bandwidth' in args.monitors:
-            UseCase.monitor_link(iface=args.iface[0], interval=args.interval[0], mode=ip_mode, pcap=args.pcap[0])
+            pcap_file = args.pcap[0] if args.pcap[0] != '' else None
+            monitor_bandwidth = UseCase.monitor_link(iface=args.iface[0], interval=args.interval[0], mode=ip_mode, pcap=pcap_file)
         if 'api' in args.monitors:
             raise NotImplemented("Api logging to be implemented!")
         #Scenario
         if args.use_scenario:
             UseCase.apply_scenario(args.vm_count[0], args.state_list)
+            if monitor_bandwidth is not None:
+                monitor_bandwidth.stop_execution()
     elif args.module == 'plot':
         categorized = category_map[args.data_type[0]]
         traffic = direction_map[args.traffic_direction[0]]
