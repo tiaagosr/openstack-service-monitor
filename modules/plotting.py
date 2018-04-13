@@ -34,7 +34,7 @@ class DataPlotting:
             plot_value['ports'] = {}
             data_func = self.process_etc_data
 
-        if traffic_type != None:
+        if traffic_type is not None:
             query = MeteringData.select().where(MeteringData.type == traffic_type)
         else:
             query = MeteringData.select()
@@ -60,8 +60,11 @@ class DataPlotting:
                 plot_value['ports'][traffic['port']] = [0] * index
             #New entry to existing port
             row_func(plot_value['ports'][traffic['port']], traffic['value'])
-        current_row_ports_index = map(lambda x: x['port'], row.etc_ports)
-        [row_func(plot_value['ports'][x], 0) for x in plot_value['ports'] if x not in current_row_ports_index]
+        current_row_ports_index = list(map(lambda x: x['port'], row.etc_ports))
+        # 0 to each absent ports
+        missing_row_ports_index = [x for x in plot_value['ports'] if x not in current_row_ports_index]
+        for port in missing_row_ports_index:
+            row_func(plot_value['ports'][port], 0)
 
     def process_service_data(self, index, row, plot_value, row_func):
         for service in plot_value['services']:

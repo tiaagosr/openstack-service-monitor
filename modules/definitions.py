@@ -64,7 +64,7 @@ class MonitoringModule(Thread):
     START_TIME = time.time()
     DATABASE = SqliteDatabase(None)
 
-    def __init__(self, interface='lo', filter='tcp', mode=MODE_IPV4):
+    def __init__(self, interface='lo', filter='', mode=MODE_IPV4):
         super().__init__()
         self.stopped = Event()
         self.sniff_iface = interface

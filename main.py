@@ -25,6 +25,7 @@ monitor.add_argument('-im', '--ip_mode', dest='ip_mode', help='IP Mode: IPv4, IP
 
 bandwidth = monitor.add_argument_group('Bandwidth')
 bandwidth.add_argument('-t', '--interval', dest='interval', help='Monitored bandwidth logging interval', type=int, nargs=1, default=5)
+bandwidth.add_argument('-w', '--write-pcap', dest='pcap', help='Path to output pcap file', type=str, nargs=1, default=None)
 
 api_log = monitor.add_argument_group('Api logging')
 
@@ -36,6 +37,7 @@ scenario.add_argument('-sl', '--state-list', dest='state_list', help='Ordered st
 
 plot = subparser.add_parser('plot',  help='Plot control network traffic data')
 category_map = {'categorized': True, 'uncategorized': False}
+plot_map = {'pie': DataPlotting.PLOT_PIE, 'line': DataPlotting.PLOT_LINE}
 direction_map = {'inbound': LinkMetering.TRAFFIC_INBOUND, 'outbound': LinkMetering.TRAFFIC_OUTBOUND, 'both': None}
 plot.add_argument('-p', '--plot-type', dest='plot_type', help='Plot type', nargs=1, type=str, choices=['pie', 'line'], default='line')
 plot.add_argument('-t', '--data-type', dest='data_type', help='Plotted data type', nargs=1, type=str, choices=category_map, default='categorized')
@@ -49,7 +51,7 @@ class UseCase:
         link_metering.start_monitoring()
 
     @staticmethod
-    def metering_plot(plot_type=DataPlotting.PLOT_PIE, categorized=True, traffic_type=None, services=None):
+    def metering_plot(plot_type=DataPlotting.PLOT_PIE, categorized=True, traffic_type=None, services=None, pcap=None):
         plot = DataPlotting(db_file, services=services)
         plot.metering_plot(plot_type=plot_type, categorized=categorized, traffic_type=traffic_type)
 
@@ -68,7 +70,7 @@ if __name__ == '__main__':
         ip_mode = mode_map[args.ip_mode[0]]
         #Monitoring Modules
         if 'bandwidth' in args.monitors:
-            UseCase.monitor_link(iface=args.iface[0], interval=args.interval[0], mode=ip_mode)
+            UseCase.monitor_link(iface=args.iface[0], interval=args.interval[0], mode=ip_mode, pcap=args.pcap[0])
         if 'api' in args.monitors:
             raise NotImplemented("Api logging to be implemented!")
         #Scenario
@@ -77,4 +79,5 @@ if __name__ == '__main__':
     elif args.module == 'plot':
         categorized = category_map[args.data_type[0]]
         traffic = direction_map[args.traffic_direction[0]]
-        UseCase.metering_plot(plot_type=args.plot_type, categorized=categorized, traffic_type=traffic, services=args.service_list)
+        type = plot_map[args.plot_type[0]]
+        UseCase.metering_plot(plot_type=type, categorized=categorized, traffic_type=traffic, services=args.service_list)

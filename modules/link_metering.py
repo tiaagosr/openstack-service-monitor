@@ -1,5 +1,7 @@
+from contextlib import ExitStack
 from threading import Thread, Lock
 import logging
+from scapy.utils import PcapWriter
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from peewee import *
 from playhouse.sqlite_ext import JSONField
@@ -23,9 +25,9 @@ class LinkMetering(MonitoringModule):
 
     SERVICES = MAP.keys()
 
-    DEFAULT_INTERVAL = 10
+    DEFAULT_INTERVAL = 1
 
-    def __init__(self, db_path, iface='wlp2s0', sniff_filter='tcp', interval=DEFAULT_INTERVAL, mode=MonitoringModule.MODE_IPV4):
+    def __init__(self, db_path, iface: str='wlp2s0', sniff_filter: str='tcp', interval: int=DEFAULT_INTERVAL, mode: str=MonitoringModule.MODE_IPV4, pcap: str=None):
         super().__init__(iface, sniff_filter, mode)
         self.aux_thread_interval = interval
         self.port_mapping = DictTools.invert(LinkMetering.MAP)
@@ -35,6 +37,7 @@ class LinkMetering(MonitoringModule):
         self.init_db(db_path)
         self.persistence = LinkMeteringPersistence()
         self.buffer_lock = Lock()
+        self.pcap = pcap
 
     @staticmethod
     def init_db(path, create_tables=True):
@@ -66,22 +69,26 @@ class LinkMetering(MonitoringModule):
 
     def run(self):
         self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.buffer_lock, self.stopped)
-        got_lock = False
-        while not self.stopped.is_set():
-            if not self.queue.empty():
-                if not self.buffer_lock.locked():
-                    self.buffer_lock.acquire()
-                    got_lock = True
-                packet = self.queue.get()
-                if not self.buffer:
-                    self.buffer.update(self.create_buffer())
-                self.measure_packet(packet)
-            else:
-                if got_lock:
-                    self.buffer_lock.release()
-                    got_lock = False
-                # Reduce CPU % Usage
-                time.sleep(0.001)
+        pcap = None
+        # Dynamic Context, open file
+        with ExitStack() as stack:
+            if self.pcap is not None:
+                pcap = stack.enter_context(PcapWriter(self.pcap))
+            while not self.stopped.is_set():
+                if not self.queue.empty():
+                    if not self.buffer_lock.locked():
+                        self.buffer_lock.acquire(timeout=1)
+                    packet = self.queue.get()
+                    # Write to pcap file if provided path
+                    if pcap is not None:
+                        pcap.write(packet)
+                    # Empty Buffer
+                    if not self.buffer:
+                        self.buffer.update(self.create_buffer())
+                    self.measure_packet(packet)
+                else:
+                    # Reduce CPU % Usage
+                    time.sleep(0.001)
 
     def start_monitoring(self):
         print("Metering link usage, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)
@@ -194,10 +201,10 @@ class LinkMeteringPersistence(Thread):
 
     def run(self):
         while not self.stopped.wait(self.interval):
-            time = MonitoringModule.execution_time()
+            exec_time = MonitoringModule.execution_time()
             self.lock.acquire()
             for item in self.buffer:
-                self.buffer[item].time = time
+                self.buffer[item].time = exec_time
                 self.buffer[item].save()
                 print(self.buffer[item])
             self.buffer.clear()
