@@ -37,7 +37,7 @@ class SniffThread(Thread):
     def loop_sniff(self):
         while not self.stopped.is_set():
             if not self.queue[0].full():
-                data = sniff(iface=self.iface, filter=self.filter, count=1000)
+                data = sniff(iface=self.iface, filter=self.filter, count=100)
                 for item in data:
                     for q in self.queue:
                         q.put(item)
