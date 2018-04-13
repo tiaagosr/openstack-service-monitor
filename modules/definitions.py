@@ -26,7 +26,7 @@ class SniffThread(Thread):
         self.iface = iface
         self.INSTANCE = self
 
-    def start_sniffing(self, shared_queue: Queue, stop_event: Event, duration=-1) -> bool:
+    def start_sniffing(self, shared_queue: Queue, stop_event: Event) -> bool:
         self.queue.append(shared_queue)
         if self.stopped is None:
             self.stopped = stop_event
