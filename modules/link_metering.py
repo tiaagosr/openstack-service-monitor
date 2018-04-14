@@ -114,13 +114,14 @@ class MeteringData(Model):
         database = LinkMetering.DATABASE
         table_name = 'link_usage'
 
-    def __init__(self, interface='', type=MonitoringModule.TRAFFIC_OUTBOUND, services=LinkMetering.MAP.keys(),
+    def __init__(self, interface='', type=MonitoringModule.TRAFFIC_OUTBOUND, services=None,
                  service_port_map=DictTools.invert(LinkMetering.MAP), interval=LinkMetering.DEFAULT_INTERVAL, **kwargs):
         super(MeteringData, self).__init__(interface=interface, type=type, **kwargs)
         self.map = service_port_map
         self.interval = interval
         self.services = services
-        self.init_services(services)
+        if services is not None:
+            self.init_services(services)
         self.port_buffer = {}
         self.etc_port_buffer = {}
 

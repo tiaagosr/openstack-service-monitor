@@ -60,7 +60,7 @@ class MonitoringModule(Thread):
     MODE_IPV6 = 'inet6'
     TRAFFIC_OUTBOUND = 'out'
     TRAFFIC_INBOUND = 'in'
-    QUEUE_SIZE = 10000
+    QUEUE_SIZE = 1000000
     START_TIME = time.time()
     DATABASE = SqliteDatabase(None)
 

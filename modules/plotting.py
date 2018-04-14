@@ -34,6 +34,7 @@ class DataPlotting:
             plot_value['ports'] = {}
             data_func = self.process_etc_data
 
+        print(traffic_type)
         if traffic_type is not None:
             query = MeteringData.select().where(MeteringData.type == traffic_type)
         else:
@@ -118,6 +119,13 @@ class DataPlotting:
     def line_setup(self, plot_data, data, legends, ax):
         for line in data:
             plt.plot(plot_data['y'], data[line])
+
+        xcoords = [100, 190, 280, 370, 460]
+        for xc in xcoords:
+            plt.axvline(x=xc, linestyle='--', alpha=0.5)
+
+        plt.ylabel('Bandwidth (bytes)')
+        plt.xlabel('Time (seconds)')
 
         plt.legend(legends, loc='upper left')
 
