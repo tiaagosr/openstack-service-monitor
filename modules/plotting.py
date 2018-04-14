@@ -1,86 +1,75 @@
 import matplotlib.pyplot as plt
 from cycler import cycler
 from datetime import datetime
-from database import DBSession
-import json
 from functools import reduce
-
 from modules.definitions import MonitoringModule
+from modules.link_metering import LinkMetering, MeteringData
 
 
 class DataPlotting:
     TRAFFIC_OUTBOUND = MonitoringModule.TRAFFIC_OUTBOUND
     TRAFFIC_INBOUND = MonitoringModule.TRAFFIC_INBOUND
+    PLOT_PIE = 1
+    PLOT_LINE = 0
 
-    def __init__(self, dbpath, services=['cinder', 'glance', 'keystone', 'nova', 'swift', 'neutron', 'ceilometer', 'etc']):
-        self.db = DBSession(dbpath)
-        self.db.create_conn()
+    def __init__(self, db_path, services=list(LinkMetering.SERVICES)+['etc']):
+        LinkMetering.init_db(db_path, create_tables=False)
         self.date_format = '%H:%M:%S'
         self.services = services
 
-    def get_service_data(self, traffic_type=None):
-        db_data = self.db.wrap_access(self._db_service_data, traffic_type)
-        plot_value = {
-            'y': [],
-            'services': {x: [] for x in self.services}
-        }
-
-        def row_increase(pos, val):
+    @staticmethod
+    def plot_increase(pos, val):
             pos[-1] += val
 
-        def row_append(pos, val):
-            pos.append(val)
+    @staticmethod
+    def plot_append(pos, val):
+        pos.append(val)
 
-        for index, row in enumerate(db_data):
+    def metering_data(self, traffic_type=None, categorized=True):
+        plot_value = {'y': []}
+        if categorized:
+            plot_value['services'] = {x: [] for x in self.services}
+            data_func = self.process_service_data
+        else:
+            plot_value['ports'] = {}
+            data_func = self.process_etc_data
+
+        print(traffic_type)
+        if traffic_type is not None:
+            query = MeteringData.select().where(MeteringData.type == traffic_type)
+        else:
+            query = MeteringData.select()
+
+        for index, row in enumerate(query):
             # Every odd row sum its value to the even row before
             # Reason: each metering creates 2 rows, one for inbound traffic and one for outbound traffic
             # The sum only happens if no traffic type was defined
             if index % 2 != 0 and traffic_type is not None:
-                row_operation = row_increase
-            #Every even row, starting from 0
+                plot_row = self.plot_increase
+            # Every even row, starting from 0
             else:
-                plot_value['y'].append(datetime.strptime(row[0], self.date_format))
-                row_operation = row_append
-            for column, service in enumerate(plot_value['services'], 1):
-                row_operation(plot_value['services'][service], row[column])
+                # plot_value['y'].append(datetime.strptime(row.time, self.date_format))
+                plot_value['y'].append(row.time)
+                plot_row = self.plot_append
+            data_func(index, row, plot_value, plot_row)
         return plot_value
 
-    def get_etc_port_data(self, traffic_type=None):
-        db_data = self.db.wrap_access(self._db_etc_port_data, traffic_type)
+    def process_etc_data(self, index, row, plot_value, row_func):
+        for traffic in row.etc_ports:
+            if traffic['port'] not in plot_value['ports']:
+                #Create new port in plotting list
+                plot_value['ports'][traffic['port']] = [0] * index
+            #New entry to existing port
+            row_func(plot_value['ports'][traffic['port']], traffic['value'])
+        current_row_ports_index = list(map(lambda x: x['port'], row.etc_ports))
+        # 0 to each absent ports
+        missing_row_ports_index = [x for x in plot_value['ports'] if x not in current_row_ports_index]
+        for port in missing_row_ports_index:
+            row_func(plot_value['ports'][port], 0)
 
-        plot_value = {
-            'y': [],
-            'ports': {}
-        }
-
-        def row_increase(pos, val):
-            pos[-1] += val
-
-        def row_append(pos, val):
-            pos.append(val)
-
-        for i, row in enumerate(db_data):
-            if i % 2 != 0 and traffic_type is not None:
-                row_operation = row_increase
-            #Every even row, starting from 0
-            else:
-                plot_value['y'].append(datetime.strptime(row[2], self.date_format))
-                row_operation = row_append
-            row_port_tuples = json.loads(row[1])
-            for port_tuple in row_port_tuples:
-                port_value = port_tuple['value']
-                port_number = port_tuple['port']
-                if port_number not in plot_value['ports']:
-                    #Create new port in plotting list
-                    plot_value['ports'][port_number] = [0] * i
-                #New entry to existing port
-                row_operation(plot_value['ports'][port_number], port_value)
-            current_row_ports_index = list(map(lambda x: x['port'], row_port_tuples))
-            not_plotted_port_tuples = [x for x in plot_value['ports'] if x not in current_row_ports_index]
-            for port in not_plotted_port_tuples:
-                row_operation(plot_value['ports'][port], 0)
-
-        return plot_value
+    def process_service_data(self, index, row, plot_value, row_func):
+        for service in plot_value['services']:
+            row_func(plot_value['services'][service], getattr(row, service, 0))
 
     def format_plot(self, title=''):
         fig, ax = plt.subplots(1, 1, figsize=(12, 9))
@@ -101,84 +90,51 @@ class DataPlotting:
 
         return fig, ax
 
-    def metering_line_plot(self, categorized=True, traffic_type=None):
+    def metering_plot(self, plot_type=PLOT_LINE, categorized=True, traffic_type=None):
+        plot_data = self.metering_data(traffic_type=traffic_type, categorized=categorized)
+
         if categorized:
-            plot_data = self.get_service_data(traffic_type)
             data = plot_data['services']
             legends = data
         else:
-            plot_data = self.get_etc_port_data(traffic_type)
             data = plot_data['ports']
             legends = list(map(lambda x: 'TCP port '+str(x), data))
+
+        if plot_type == DataPlotting.PLOT_LINE:
+            plotting_func = self.line_setup
+        else:
+            plotting_func = self.pie_setup
 
         title = 'Total Traffic'
         if traffic_type == MonitoringModule.TRAFFIC_OUTBOUND:
             title = 'Outbound Traffic'
         elif traffic_type == MonitoringModule.TRAFFIC_INBOUND:
             title = 'Inbound Traffic'
-        self.format_plot(title)
+        _, ax = self.format_plot(title)
 
+        plotting_func(plot_data, data, legends, ax)
+
+        plt.show()
+
+    def line_setup(self, plot_data, data, legends, ax):
         for line in data:
             plt.plot(plot_data['y'], data[line])
 
+        xcoords = [100, 190, 280, 370, 460]
+        for xc in xcoords:
+            plt.axvline(x=xc, linestyle='--', alpha=0.5)
+
+        plt.ylabel('Bandwidth (bytes)')
+        plt.xlabel('Time (seconds)')
+
         plt.legend(legends, loc='upper left')
-        plt.show()
 
-    def metering_pie_plot(self, categorized=True, traffic_type=None):
-        if categorized:
-            plot_data = self.get_service_data(traffic_type)
-            data = plot_data['services']
-            legends = data
-        else:
-            plot_data = self.get_etc_port_data(traffic_type)
-            data = plot_data['ports']
-            legends = list(map(lambda x: 'TCP port '+str(x), data))
-
-        title = 'Total Traffic'
-        if traffic_type == MonitoringModule.TRAFFIC_OUTBOUND:
-            title = 'Outbound Traffic'
-        elif traffic_type == MonitoringModule.TRAFFIC_INBOUND:
-            title = 'Inbound Traffic'
-        fig1, ax1 = self.format_plot(title)
-
+    def pie_setup(self, plot_data, data, legends, ax):
         sizes = []
         for line in data:
             sizes.append(reduce((lambda x, y: x + y), data[line]))
         legends = [x for index, x in enumerate(legends) if sizes[index] > 0]
         sizes = [x for x in sizes if x > 0]
-        explode = (0, 0.1, 0, 0)  # only "explode" the 2nd slice (i.e. 'Hogs')
 
-        ax1.pie(sizes, labels=legends, autopct='%1.1f%%',
-                startangle=90)
-        ax1.axis('equal')
-        plt.show()
-
-    def _db_metering_query(self, fields: list, traffic_type=None) -> str:
-        query = 'SELECT '
-        first = True
-        # Generate query based on service list
-        for f in fields:
-            if first:
-                first = False
-                query += f
-            else:
-                query += ', '+f
-        query += ' FROM link_usage'
-        if traffic_type is not None:
-            query += ' where type="{type}"'.format(type=traffic_type)
-        query += ' ORDER BY id'
-        return query
-
-    def _db_service_data(self, cursor, traffic_type=None):
-        fields = ['time']
-        for service in self.services:
-            fields.append('m_'+service)
-        query = self._db_metering_query(fields, traffic_type)
-        cursor.execute(query)
-        return cursor.fetchall()
-
-    def _db_etc_port_data(self, cursor, traffic_type):
-        fields = ['m_etc', 'etc_ports', 'time', 'type']
-        query = self._db_metering_query(fields, traffic_type)
-        cursor.execute(query)
-        return cursor.fetchall()
+        ax.pie(sizes, labels=legends, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')

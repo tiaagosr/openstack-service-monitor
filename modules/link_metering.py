@@ -1,100 +1,219 @@
-from scapy.all import IP, Packet, sniff, TCP
-from modules.definitions import MonitoringModule, DictionaryInit
+from contextlib import ExitStack
+from threading import Thread, Lock
+import logging
+from scapy.utils import PcapWriter
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
+from peewee import *
+from playhouse.sqlite_ext import JSONField
+from scapy.all import Packet
+from modules.definitions import MonitoringModule, DictTools
 import json
+import time
 
-# Inbound and Outbound: self.metering_result
+
 class LinkMetering(MonitoringModule):
-    def __init__(self, dbpath, iface='wlp2s0', sniff_filter='tcp', interval=10, mode=MonitoringModule.MODE_IPV4):
-        super().__init__(iface, sniff_filter, self.measure_packet, dbpath, mode)
+    MAP = {
+        'nova': set([5900, 6080, 6081, 6082, 8773, 8774, 8775] + list(range(5900, 5999))),
+        'keystone': {5000, 35357},
+        'swift': {873, 6000, 6001, 6002, 8080},
+        'glance': {9191, 9292},
+        'cinder': {3260, 8776},
+        'neutron': {9696},
+        'ceilometer': {8777},
+        'ceph': {6800, 7300}
+    }
+
+    SERVICES = MAP.keys()
+
+    DEFAULT_INTERVAL = 1
+
+    def __init__(self, db_path, iface: str='wlp2s0', sniff_filter: str='tcp', interval: int=DEFAULT_INTERVAL, mode: str=MonitoringModule.MODE_IPV4, pcap: str=None):
+        super().__init__(iface, sniff_filter, mode)
         self.aux_thread_interval = interval
-        self.ignored_count = 0
-        self.dict = DictionaryInit()
-        self.metering_buffer = self.dict.metering_buffer()
-        self.metering_result = self.dict.metering_dictionary()
-        self.port_mapping = self.dict.metering_ports()
+        self.port_mapping = DictTools.invert(LinkMetering.MAP)
+        self.services = LinkMetering.MAP.keys()
+        self.buffer_params = {'interface': self.sniff_iface, 'services': self.services, 'interval': self.aux_thread_interval, 'service_port_map': self.port_mapping}
+        self.buffer = None
+        self.reset_buffer()
+        self.init_db(db_path)
+        self.persistence = LinkMeteringPersistence()
+        self.pcap = pcap
+
+    @staticmethod
+    def init_db(path, create_tables=True):
+        LinkMetering.DATABASE.init(path)
+        LinkMetering.DATABASE.connect()
+        if create_tables:
+            LinkMetering.DATABASE.create_tables([MeteringData])
 
     def measure_packet(self, packet):
         port, traffic_type = self.classify_packet(packet, self.port_mapping, self.iface_ip)
+        if traffic_type is None:
+            return
+
+        buffer = self.buffer[traffic_type]
+
         if port is not None:
-            port_sum = self.metering_buffer.get(port, 0)
-            self.metering_buffer[traffic_type][port] = packet.len + port_sum
+            buffer[port] += packet.len
         # Packet without TCP Layer (subsequently, without destination port)
         elif traffic_type is not None:
-            self.metering_result[traffic_type]['etc'] += packet.len
+            buffer['etc'] += packet.len
         # Packet without IP layer
         else:
-            self.ignored_count += 1
+            buffer.ignored_count += 1
 
-    def calculate_and_persist(self):
-        # Shallow copy dict shared by threads
-        metering_result_copy = dict(self.calculate_usage())
-        self.persist_metering_result(metering_result_copy)
-        del metering_result_copy
-        # reset values
-        self.metering_result = self.dict.metering_dictionary()
-        self.ignored_count = 0
-
-    def calculate_usage(self):
-        # Shallow copy dict shared by threads
-        buffer_copy = dict(self.metering_buffer)
-        self.metering_buffer = self.dict.metering_buffer()
-        for traffic_type in buffer_copy:
-            for port in buffer_copy[traffic_type]:
-                port_usage = round(buffer_copy[traffic_type][port] / self.aux_thread_interval)
-                service = self.classify_port(port)
-                # uncategorized port
-                if service == 'etc' and not self.is_ephemeral_port(port):
-                    self.metering_result[traffic_type]['etc_ports'][port] = port_usage
-                self.metering_result[traffic_type][service] += port_usage
-        del buffer_copy
-        return self.metering_result
-
-    def is_ephemeral_port(self, port):
-        return port != 35357 and 32768 <= port <= 60999
+    def reset_buffer(self):
+        inbound_buffer = MeteringData(type=MonitoringModule.TRAFFIC_INBOUND, **self.buffer_params)
+        outbound_buffer = MeteringData(type=MonitoringModule.TRAFFIC_OUTBOUND, **self.buffer_params)
+        self.buffer = {MonitoringModule.TRAFFIC_INBOUND: inbound_buffer,
+                       MonitoringModule.TRAFFIC_OUTBOUND: outbound_buffer}
+        return self.buffer
 
     def run(self):
-        self.init_persistance()
-        while not self.stopped.wait(self.aux_thread_interval):
-            self.calculate_and_persist()
-
-    def classify_port(self, port):
-        if port in self.port_mapping:
-            return self.port_mapping[port]
-        return 'etc'
+        self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.stopped, self.reset_buffer)
+        pcap = None
+        # Dynamic Context, open file
+        with ExitStack() as stack:
+            if self.pcap is not None:
+                pcap = stack.enter_context(PcapWriter(self.pcap))
+            while not self.stopped.is_set():
+                if not self.queue.empty():
+                    packet = self.queue.get()
+                    # Write to pcap file if provided path
+                    if pcap is not None:
+                        pcap.write(packet)
+                    self.measure_packet(packet)
+                else:
+                    # Reduce CPU % Usage
+                    time.sleep(0.001)
+            print("Consumer Thread Stopped!")
 
     def start_monitoring(self):
         print("Metering link usage, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)
         self.start_sniffing()
         self.start()
 
-    def _db_init_persistance(self, cursor):
-        cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS link_usage(id INTEGER PRIMARY KEY, type VARCHAR(5), interface VARCHAR(40), m_etc INTEGER, m_nova INTEGER, m_neutron INTEGER, m_keystone INTEGER, m_glance INTEGER, m_cinder INTEGER, m_swift INTEGER, m_ceilometer INTEGER, etc_ports TEXT, ignored_count INTEGER, time DATE)''')
 
-    def init_persistance(self):
-        self.db.create_conn()
-        self.db.wrap_access(self._db_init_persistance)
+class MeteringData(Model):
+    interface = CharField()
+    type = CharField()
+    time = TimeField(formats='%H:%M:%S')
+    ignored_count = IntegerField(default=0)
+    etc_ports = JSONField(default={})
+    etc = IntegerField(default=0, column_name='m_etc')
+    nova = IntegerField(default=0, column_name='m_nova')
+    keystone = IntegerField(default=0, column_name='m_keystone')
+    swift = IntegerField(default=0, column_name='m_swift')
+    glance = IntegerField(default=0, column_name='m_glance')
+    cinder = IntegerField(default=0, column_name='m_cinder')
+    neutron = IntegerField(default=0, column_name='m_neutron')
+    ceilometer = IntegerField(default=0, column_name='m_ceilometer')
+    ceph = IntegerField(default=0, column_name='m_ceph')
 
-    def _db_persist_result(self, cursor, result):
-        exec_time = self.execution_time()
-        for traffic_type in result:
-            query = '''INSERT INTO link_usage (interface, type, time, ignored_count, m_cinder, m_etc, m_glance, m_keystone, m_nova, m_neutron, m_swift, m_ceilometer, etc_ports) 
-                VALUES ("{iface}", "{type}", time({time}, 'unixepoch'), "{ignored_count}", "{cinder}", "{etc}", "{glance}", "{keystone}", "{nova}", "{neutron}", "{swift}", "{ceilometer}", '{etc_ports}')'''\
-                .format(iface=self.sniff_iface, type=traffic_type, time=exec_time, ignored_count=str(self.ignored_count), **result[traffic_type])
-            cursor.execute(query)
+    class Meta:
+        database = LinkMetering.DATABASE
+        table_name = 'link_usage'
 
-    def persist_metering_result(self, result: dict = {}):
-        for traffic_type in result:
-            current_result = result[traffic_type]
-            if 'etc_ports' in current_result:
-                top_ports = [{'port': a, 'value': int(x)} for a, x in current_result['etc_ports'].items()]
-                sorted_top_ports = sorted(top_ports, key=lambda x: x['value'], reverse=True)[:10]
-                current_result['etc_ports'] = json.dumps(sorted_top_ports)
-        self.db.wrap_access(self._db_persist_result, result)
+    def __init__(self, interface='', type=MonitoringModule.TRAFFIC_OUTBOUND, services=None,
+                 service_port_map=DictTools.invert(LinkMetering.MAP), interval=LinkMetering.DEFAULT_INTERVAL, **kwargs):
+        super(MeteringData, self).__init__(interface=interface, type=type, **kwargs)
+        self.map = service_port_map
+        self.interval = interval
+        self.services = services
+        if services is not None:
+            self.init_services(services)
+        self.port_buffer = {}
+        self.etc_port_buffer = {}
 
-    def _db_print_results(self, cursor):
-        result = cursor.execute("SELECT * FROM link_usage ORDER BY time DESC LIMIT 1")
-        print(result.fetchone())
+    def __getitem__(self, item):
+        if item in self.services or item == 'etc':
+            return getattr(self, item, 0)
+        if not isinstance(item, int):
+            raise TypeError('Metering index must be int (Port) or str (Service)')
+        return self.port_buffer.get(item, 0)
 
-    def print_results(self):
-        self.db.wrap_access(self._db_print_results)
+    def __setitem__(self, key, value):
+        if key in self.services or key == 'etc':
+            return setattr(self, key, value)
+        if not isinstance(key, int):
+            raise TypeError('Metering index must be int (Port) or str (Service)')
+        self.port_buffer[key] = value
+
+    def init_services(self, service_list):
+        map(lambda x: setattr(self, x, 0), service_list)
+        self.etc = 0
+
+    def calculate_metering(self):
+        for port in self.port_buffer:
+            usage = round(self[port] / self.interval)
+            service = self.classify_port(port)
+            self.port_calculation(port, service, usage)
+        self._sort_etc_ports()
+
+    def port_calculation(self, port, service, usage):
+        # uncategorized port
+        if service == 'etc' and not self.is_ephemeral(port):
+            self.etc_port_buffer[port] = usage
+        self[service] += usage
+
+    def classify_port(self, port):
+        if port in self.map:
+            return self.map[port]
+        return 'etc'
+
+    @staticmethod
+    def is_ephemeral(port):
+        return port != 35357 and 32768 <= port <= 60999
+
+    def _sort_etc_ports(self, max_position=10):
+        top_ports = [{'port': a, 'value': int(x)} for a, x in self.etc_port_buffer.items()]
+        self.etc_ports = sorted(top_ports, key=lambda x: x['value'], reverse=True)[:max_position]
+
+    def content(self):
+        services = {x: getattr(self, x, 0) for x in self.services}
+        attrs = {'interface': self.interface, 'type': self.type, 'time': self.time, 'ignored_count': self.ignored_count, 'etc_ports': json.dumps(self.etc_ports), 'etc': self.etc}
+        return {**attrs, **services}
+
+    def __str__(self):
+        return str(self.content())
+
+    def save(self, force_insert=False, only=None):
+        self.calculate_metering()
+        self._sort_etc_ports()
+        super(MeteringData, self).save(force_insert, only)
+
+
+class LinkMeteringPersistence(Thread):
+    def __init__(self):
+        super().__init__()
+        self.stopped = None
+        self.buffer = None
+        self.interval = None
+        self.buffer_reset = None
+        self.buffer_context = None
+        self.duration = -1
+
+    def timed_storage(self, buffer, interval, stop_event, buffer_reset, duration=-1):
+        self.buffer = buffer
+        self.duration = duration
+        self.buffer_reset = buffer_reset
+        self.interval = interval
+        self.stopped = stop_event
+        self.start()
+
+    def run(self):
+        while not self.stopped.wait(self.interval):
+            exec_time = MonitoringModule.execution_time()
+
+            buffer = self.buffer
+            self.buffer = self.buffer_reset()
+
+            for item in buffer:
+                buffer[item].time = exec_time
+                buffer[item].save()
+                #print(buffer[item])
+            buffer.clear()
+
+            if 0 < self.duration < exec_time:
+                print("Stop execution!")
+                self.stopped.set()

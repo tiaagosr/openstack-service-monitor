@@ -1,50 +1,97 @@
-from threading import Thread, Timer, Event
+from threading import Thread, Event
+from peewee import SqliteDatabase
+import logging
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import sniff, Packet, TCP, IP, IPv6
-from database import DBSession
+from queue import Queue
 import os
 import time
-import copy
+
+
+class SniffThread(Thread):
+
+    INSTANCE = None
+
+    @staticmethod
+    def instance(iface='', filter=''):
+        if SniffThread.INSTANCE is None:
+            SniffThread.INSTANCE = SniffThread(iface=iface, filter=filter)
+        return SniffThread.INSTANCE
+
+    def __init__(self, filter='', iface=''):
+        super().__init__(name="osm-sniffer")
+        self.queue = []
+        self.stopped = None
+        self.filter = filter
+        self.iface = iface
+        self.INSTANCE = self
+
+    def start_sniffing(self, shared_queue: Queue, stop_event: Event) -> bool:
+        self.queue.append(shared_queue)
+        if self.stopped is None:
+            self.stopped = stop_event
+            self.start()
+            return True
+        return False
+
+    def loop_sniff(self):
+        while not self.stopped.is_set():
+            if not self.queue[0].full():
+                data = sniff(iface=self.iface, filter=self.filter, count=10)
+                for item in data:
+                    for q in self.queue:
+                        q.put(item)
+            else:
+                # Reduce CPU % Usage
+                time.sleep(0.001)
+        print("Producer Thread Stopped!")
+
+    def store_packet(self, packet):
+        if not self.queue[0].full():
+            self.queue[0].put(packet)
+
+    def run(self):
+        #self.loop_sniff()
+        sniff(iface=self.iface, filter='', store=0, prn=self.store_packet)
 
 
 class MonitoringModule(Thread):
-    MODE_IPV4 = 0
-    MODE_IPV6 = 1
+    MODE_IPV4 = 'inet'
+    MODE_IPV6 = 'inet6'
     TRAFFIC_OUTBOUND = 'out'
     TRAFFIC_INBOUND = 'in'
+    QUEUE_SIZE = 1000000
+    START_TIME = time.time()
+    DATABASE = SqliteDatabase(None)
 
-    def __init__(self, iface='lo', filter='tcp', action=None, dbpath=':memory:', mode=MODE_IPV4):
-        Thread.__init__(self)
+    def __init__(self, interface='lo', filter='', mode=MODE_IPV4):
+        super().__init__()
         self.stopped = Event()
-        self.sniff_iface = iface
+        self.sniff_iface = interface
         self.sniff_filter = filter
         self.sniff_thread = None
-        self.action = self.default_sniff_action if action is None else action
-        self.db = DBSession(dbpath)
+        self.queue = Queue(MonitoringModule.QUEUE_SIZE)
+
         self.mode = mode
         if mode == MonitoringModule.MODE_IPV4:
             self.ip_layer = IP
         else:
             self.ip_layer = IPv6
-        self.iface_ip = self.get_iface_ip(iface, mode)
-        self.start_time = time.time()
+        self.iface_ip = self.iface_ip(interface, mode)
 
-    def default_sniff_action(self, packet):
-        return
+    @staticmethod
+    def execution_time() -> int:
+        return round(time.time() - MonitoringModule.START_TIME)
 
-    def execution_time(self) -> int:
-        return round(time.time() - self.start_time)
-
-    def get_iface_ip(self, iface: str, mode=MODE_IPV4) -> str:
+    @staticmethod
+    def iface_ip(iface: str, mode=MODE_IPV4) -> str:
         cmd = 'ip addr show '+iface
-        if mode == MonitoringModule.MODE_IPV6:
-            split = "inet6 "
-        else:
-            split = "inet "
+        split = mode + ' '
         return os.popen(cmd).read().split(split)[1].split("/")[0]
     
-    def start_sniffing(self, args={}):
-        self.sniff_thread = Thread(target=sniff, kwargs={'iface':self.sniff_iface, 'prn':self.action, 'filter':self.sniff_filter, 'store':0}, **args)
-        self.sniff_thread.start()
+    def start_sniffing(self):
+        self.sniff_thread = SniffThread.instance(iface=self.sniff_iface, filter='')
+        self.sniff_thread.start_sniffing(self.queue, self.stopped)
 
     def stop_execution(self):
         self.stopped.set()
@@ -58,7 +105,6 @@ class MonitoringModule(Thread):
                 traffic_type = MonitoringModule.TRAFFIC_OUTBOUND
             else:
                 traffic_type = MonitoringModule.TRAFFIC_INBOUND
-            #print("src: "+packet[self.ip_layer].src+" dst:"+packet[self.ip_layer].dst+" type: "+traffic_type)
         if TCP in packet:
             #packet port is the client dport or the server sport
             if packet.sport in port_map:
@@ -67,57 +113,16 @@ class MonitoringModule(Thread):
                 port = packet.dport
 
         return port, traffic_type
-        
 
 
-class DictionaryInit(object):
-    def __init__(self):
-        self.link_metering_ports = {'nova': set([5900, 6080, 6081, 6082, 8773, 8774, 8775] + list(range(5900, 5999))),
-            'keystone': set([5000, 35357]),
-            'swift': set([873, 6000, 6001, 6002, 8080]),
-            'glance': set([9191, 9292]),
-            'cinder': set([3260, 8776]),
-            'neutron': set([9696]),
-            'ceilometer': set([8777])
-            #'ceph': set([6800, 7300])
-        }
-
-    def metering_services(self):
-        return self.link_metering_ports.keys()
-
-    def metering_ports(self) -> dict:
-        return self.invert_dictionary_relationship(self.link_metering_ports)
-
-    def api_ports(self) -> dict:
-        port_range = {'nova': set([8774]), 
-              'keystone': set([5000, 35357]), 
-              'swift': set([8080]),
-              'glance': set([9292]),
-              'cinder': set([8776]),
-              'neutron': set([9696]),
-              #'ceph': set([6789])
-        }
-        return self.invert_dictionary_relationship(port_range)
-
-    def port_dictionary(self) -> dict:
-        dictionary = {x: [] for x in self.api_ports()}
-        dictionary['etc'] = []
-        return dictionary
-
-    def metering_dictionary(self) -> dict:
-        services = {x: 0 for x in self.metering_services()}
-        services['etc'] = 0
-        services['etc_ports'] = {}
-        return {MonitoringModule.TRAFFIC_INBOUND: copy.deepcopy(services), MonitoringModule.TRAFFIC_OUTBOUND: copy.deepcopy(services)}
-
-    def metering_buffer(self) -> dict:
-        return {MonitoringModule.TRAFFIC_INBOUND: {}, MonitoringModule.TRAFFIC_OUTBOUND: {}}
-
-    def add_multiple_key_single_value(self, keys: list=[], value=None, dictionary: dict={}):
+class DictTools:
+    @staticmethod
+    def add_multiple_key_single_value(keys: list=[], value=None, dictionary: dict={}):
         for key in keys:
             dictionary[key] = value
-    
-    def invert_dictionary_relationship(self, dictionary: dict) -> dict:
+
+    @staticmethod
+    def invert(dictionary: dict) -> dict:
         new_dict = {}
         for key in dictionary:
             for value in dictionary[key]:

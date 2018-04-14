@@ -4,3 +4,5 @@ python-keystoneclient
 python-glanceclient
 python-neutronclient
 python-novaclient
+argparse
+peewee

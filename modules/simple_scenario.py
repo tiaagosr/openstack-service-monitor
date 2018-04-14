@@ -5,9 +5,9 @@ from glanceclient import Client as glanceclient
 from neutronclient.v2_0 import client as neutronclient
 from novaclient import client as novaclient
 import time
-# from definitions import MonitoringModule
 
-class ScenarioManager():
+
+class ScenarioManager:
 
     def __init__(self, flavor="m1.small", image="trusty-server", auth_data=None):
         self.flavor = flavor
@@ -108,7 +108,7 @@ class ScenarioManager():
         if name in self.vms and state in state_dict and self.get_vm_status(name) in state_dict[state]['condition']:
             return state_dict[state]['function'](self.vms[name])
 
-    def test_scenario(self, vm_count=1, state_list=['stop'], sleep=120):
+    def test_scenario(self, vm_count=1, state_list=['stop'], sleep=90):
         vm_list = []
         for i in range(vm_count):
             vm_list.append(self.vm_create())
@@ -118,6 +118,6 @@ class ScenarioManager():
             print('Changing vms state to '+state)
             for vm in vm_list:
                 self.vm_set_state(vm, state)
-        time.sleep(120)
+        time.sleep(sleep)
         print('Scenario Finished!')
 
