@@ -1,11 +1,12 @@
 from contextlib import ExitStack
 from threading import Thread, Lock
 import logging
-from scapy.utils import PcapWriter
+from modules.pcap import PcapWriter
+from scapy.layers.l2 import Ether
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from peewee import *
 from playhouse.sqlite_ext import JSONField
-from scapy.all import Packet
+from scapy.all import Packet, IPv6, IP
 from modules.definitions import MonitoringModule, DictTools
 import json
 import time
@@ -46,21 +47,28 @@ class LinkMetering(MonitoringModule):
         if create_tables:
             LinkMetering.DATABASE.create_tables([MeteringData])
 
-    def measure_packet(self, packet):
-        port, traffic_type = self.classify_packet(packet, self.port_mapping, self.iface_ip)
-        if traffic_type is None:
-            return
+    def measure_packet(self, traffic_type, packet_bytes):
+        packet = Ether(packet_bytes)
+        traffic_type = self.packet_type(traffic_type)
+
+        port = self.classify_packet(packet, self.port_mapping)
 
         buffer = self.buffer[traffic_type]
 
-        if port is not None:
-            buffer[port] += packet.len
-        # Packet without TCP Layer (subsequently, without destination port)
-        elif traffic_type is not None:
-            buffer['etc'] += packet.len
-        # Packet without IP layer
+        if IPv6 in packet:
+            plen = packet.plen
+        elif IP in packet:
+            plen = packet.len
         else:
             buffer.ignored_count += 1
+            return
+
+        if port is not None:
+            buffer[port] += plen
+        # Packet without TCP Layer (subsequently, without destination port)
+        elif traffic_type is not None:
+            buffer['etc'] += plen
+
 
     def reset_buffer(self):
         inbound_buffer = MeteringData(type=MonitoringModule.TRAFFIC_INBOUND, **self.buffer_params)
@@ -72,21 +80,22 @@ class LinkMetering(MonitoringModule):
     def run(self):
         self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.stopped, self.reset_buffer)
         pcap = None
-        # Dynamic Context, open file
-        with ExitStack() as stack:
-            if self.pcap is not None:
-                pcap = stack.enter_context(PcapWriter(self.pcap))
-            while not self.stopped.is_set():
-                if not self.queue.empty():
-                    packet = self.queue.get()
-                    # Write to pcap file if provided path
-                    if pcap is not None:
-                        pcap.write(packet)
-                    self.measure_packet(packet)
-                else:
-                    # Reduce CPU % Usage
-                    time.sleep(0.001)
-            print("Consumer Thread Stopped!")
+        if self.pcap is not None:
+            pcap = PcapWriter(self.pcap)
+        while not self.stopped.is_set():
+            if not self.queue.empty():
+                traffic_type, packet = self.queue.get()
+                # Write to pcap file if provided path
+                if pcap is not None:
+                    pcap.write(packet)
+                self.measure_packet(traffic_type, packet)
+            else:
+                # Reduce CPU % Usage
+                time.sleep(0.001)
+        if pcap is not None:
+            pcap.flush()
+            pcap.close()
+        print("Consumer Thread Stopped!")
 
     def start_monitoring(self):
         print("Metering link usage, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)

@@ -1,8 +1,10 @@
+import socket
 from threading import Thread, Event
 from peewee import SqliteDatabase
+from modules.sniffer import IPSniff
 import logging
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
-from scapy.all import sniff, Packet, TCP, IP, IPv6
+from scapy.all import TCP, IP, IPv6, Packet
 from queue import Queue
 import os
 import time
@@ -13,17 +15,17 @@ class SniffThread(Thread):
     INSTANCE = None
 
     @staticmethod
-    def instance(iface='', filter=''):
+    def instance(iface=''):
         if SniffThread.INSTANCE is None:
-            SniffThread.INSTANCE = SniffThread(iface=iface, filter=filter)
+            SniffThread.INSTANCE = SniffThread(iface=iface)
         return SniffThread.INSTANCE
 
-    def __init__(self, filter='', iface=''):
+    def __init__(self, iface=''):
         super().__init__(name="osm-sniffer")
         self.queue = []
         self.stopped = None
-        self.filter = filter
         self.iface = iface
+        self.sniffer = None
         self.INSTANCE = self
 
     def start_sniffing(self, shared_queue: Queue, stop_event: Event) -> bool:
@@ -34,25 +36,16 @@ class SniffThread(Thread):
             return True
         return False
 
-    def loop_sniff(self):
-        while not self.stopped.is_set():
-            if not self.queue[0].full():
-                data = sniff(iface=self.iface, filter=self.filter, count=10)
-                for item in data:
-                    for q in self.queue:
-                        q.put(item)
-            else:
-                # Reduce CPU % Usage
-                time.sleep(0.001)
-        print("Producer Thread Stopped!")
-
-    def store_packet(self, packet):
-        if not self.queue[0].full():
-            self.queue[0].put(packet)
+    def store_packet(self, direction, packet):
+        data = (direction, packet)
+        for q in self.queue:
+            if not q.full():
+                q.put(data)
 
     def run(self):
-        #self.loop_sniff()
-        sniff(iface=self.iface, filter='', store=0, prn=self.store_packet)
+        self.sniffer = IPSniff(self.iface, callback=self.store_packet)
+        self.sniffer.recv()
+        print("Producer Thread Stopped!")
 
 
 class MonitoringModule(Thread):
@@ -63,6 +56,12 @@ class MonitoringModule(Thread):
     QUEUE_SIZE = 1000000
     START_TIME = time.time()
     DATABASE = SqliteDatabase(None)
+
+    @staticmethod
+    def packet_type(traffic_type):
+        if traffic_type == socket.PACKET_OUTGOING:
+            return MonitoringModule.TRAFFIC_OUTBOUND
+        return MonitoringModule.TRAFFIC_INBOUND
 
     def __init__(self, interface='lo', filter='', mode=MODE_IPV4):
         super().__init__()
@@ -90,29 +89,23 @@ class MonitoringModule(Thread):
         return os.popen(cmd).read().split(split)[1].split("/")[0]
     
     def start_sniffing(self):
-        self.sniff_thread = SniffThread.instance(iface=self.sniff_iface, filter='')
+        self.sniff_thread = SniffThread.instance(iface=self.sniff_iface)
         self.sniff_thread.start_sniffing(self.queue, self.stopped)
 
     def stop_execution(self):
         self.stopped.set()
 
-    def classify_packet(self, packet: Packet, port_map: dict, iface_ip: str) -> (str, str):
-        traffic_type = None
+    def classify_packet(self, packet: Packet, port_map: dict) -> (str, str):
         port = None
 
-        if self.ip_layer in packet:
-            if iface_ip in packet[self.ip_layer].src:
-                traffic_type = MonitoringModule.TRAFFIC_OUTBOUND
-            else:
-                traffic_type = MonitoringModule.TRAFFIC_INBOUND
         if TCP in packet:
             #packet port is the client dport or the server sport
-            if packet.sport in port_map:
-                port = packet.sport
-            else:
+            if packet.dport in port_map:
                 port = packet.dport
+            else:
+                port = packet.sport
 
-        return port, traffic_type
+        return port
 
 
 class DictTools:
