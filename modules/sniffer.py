@@ -22,11 +22,11 @@ class IPSniff:
         self.ins.bind((self.interface_name, ETH_P_ALL))
 
     def recv(self):
+        if self.on_packet is None:
+            raise ReferenceError('Callback function was not provided!')
+
         while not self.stop_cond.is_set():
 
             pkt, sa_ll = self.ins.recvfrom(MTU)
-
-            if self.on_packet is None:
-                break
 
             self.on_packet(sa_ll[2], pkt)

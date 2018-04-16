@@ -40,6 +40,8 @@ class SniffThread(Thread):
         for q in self.queue:
             if not q.full():
                 q.put(data)
+            else:
+                print('Queue Full!')
 
     def run(self):
         self.sniffer = IPSniff(self.iface, callback=self.store_packet)
@@ -52,7 +54,7 @@ class MonitoringModule(Thread):
     MODE_IPV6 = 'inet6'
     TRAFFIC_OUTBOUND = 'out'
     TRAFFIC_INBOUND = 'in'
-    QUEUE_SIZE = 10000
+    QUEUE_SIZE = 100000
     START_TIME = time.time()
     DATABASE = SqliteDatabase(None)
 
