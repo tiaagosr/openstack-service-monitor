@@ -1,38 +1,38 @@
 import socket
 from threading import Thread, Event
+import multiprocessing as mp
 from peewee import SqliteDatabase
 from modules.sniffer import IPSniff
 from scapy.layers.inet import IP, TCP, Packet
 from scapy.layers.inet6 import IPv6
-from queue import Queue
 import os
 import time
 
 
-class SniffThread(Thread):
+class PacketSniffer(mp.Process):
 
     INSTANCE = None
 
     @staticmethod
     def instance(iface='lo'):
-        if SniffThread.INSTANCE is None:
-            SniffThread.INSTANCE = SniffThread(iface=iface)
-        return SniffThread.INSTANCE
+        if PacketSniffer.INSTANCE is None:
+            PacketSniffer.INSTANCE = PacketSniffer(iface)
+        return PacketSniffer.INSTANCE
 
     def __init__(self, iface):
         super().__init__()
-        self.queue = []
-        self.stopped = None
+        self.queue = None
+        self.stopped = Event()
         self.iface = iface
         self.sniffer = None
         self.INSTANCE = self
 
-    def start_sniffing(self, shared_queue: Queue, stop_event: Event) -> bool:
-        self.queue.append(shared_queue)
-        if self.stopped is None:
-            self.stopped = stop_event
+    def start_sniffing(self, shared_queue: mp.Queue) -> bool:
+        if self.queue is None:
+            self.queue = [shared_queue]
             self.start()
             return True
+        self.queue.append(shared_queue)
         return False
 
     def store_packet(self, direction, packet):
@@ -40,8 +40,6 @@ class SniffThread(Thread):
         for q in self.queue:
             if not q.full():
                 q.put(data)
-            else:
-                print('Queue Full!')
 
     def run(self):
         self.sniffer = IPSniff(self.iface, callback=self.store_packet)
@@ -69,7 +67,8 @@ class MonitoringModule(Thread):
         self.stopped = Event()
         self.sniff_iface = interface
         self.sniff_thread = None
-        self.queue = Queue(MonitoringModule.QUEUE_SIZE)
+        manager = mp.Manager()
+        self.queue = manager.Queue(self.QUEUE_SIZE)
 
         self.mode = mode
         if mode == MonitoringModule.MODE_IPV4:
@@ -89,8 +88,8 @@ class MonitoringModule(Thread):
         return os.popen(cmd).read().split(split)[1].split("/")[0]
     
     def start_sniffing(self):
-        self.sniff_thread = SniffThread.instance(iface=self.sniff_iface)
-        self.sniff_thread.start_sniffing(self.queue, self.stopped)
+        self.sniff_thread = PacketSniffer(iface=self.sniff_iface)
+        self.sniff_thread.start_sniffing(self.queue)
 
     def stop_execution(self):
         self.stopped.set()
