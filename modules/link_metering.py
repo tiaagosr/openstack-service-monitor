@@ -1,9 +1,10 @@
 from threading import Thread
 from modules.pcap import PcapWriter
-from scapy.layers.l2 import Ether
 from peewee import *
 from playhouse.sqlite_ext import JSONField
-from scapy.all import IPv6, IP
+from scapy.layers.l2 import Ether
+from scapy.layers.inet import IP
+from scapy.layers.inet6 import IPv6
 from modules.definitions import MonitoringModule, DictTools
 import json
 import time

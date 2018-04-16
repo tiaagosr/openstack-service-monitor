@@ -7,6 +7,7 @@ __pycache__/
 
 *.db
 *.iml
+*.pcap
 
 # C extensions
 *.so

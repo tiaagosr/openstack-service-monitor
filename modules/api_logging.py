@@ -1,7 +1,9 @@
 from peewee import *
 from playhouse.sqlite_ext import JSONField
-from scapy.all import IP, TCP, IPv6, bind_layers, Raw
+from scapy.packet import Raw, bind_layers
 from scapy.layers.l2 import Ether
+from scapy.layers.inet import IP, TCP, Packet
+from scapy.layers.inet6 import IPv6
 from scapy_http.http import *
 from threading import Thread, Timer, Event
 import time

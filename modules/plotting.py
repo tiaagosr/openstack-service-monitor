@@ -118,7 +118,8 @@ class DataPlotting:
         for line in data:
             plt.plot(plot_data['y'], data[line])
 
-        xcoords = [100, 190, 280, 370, 460]
+        #xcoords = [100, 190, 280, 370, 460]
+        xcoords = []
         for xc in xcoords:
             plt.axvline(x=xc, linestyle='--', alpha=0.5)
 

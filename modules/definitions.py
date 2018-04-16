@@ -2,7 +2,8 @@ import socket
 from threading import Thread, Event
 from peewee import SqliteDatabase
 from modules.sniffer import IPSniff
-from scapy.all import TCP, IP, IPv6, Packet
+from scapy.layers.inet import IP, TCP, Packet
+from scapy.layers.inet6 import IPv6
 from queue import Queue
 import os
 import time
