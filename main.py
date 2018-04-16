@@ -67,7 +67,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.module == 'monitor':
         monitor_bandwidth = None
-        ip_mode = mode_map[args.ip_mode[0]]
+        ip_mode = mode_map[args.ip_mode]
         #Monitoring Modules
         if 'bandwidth' in args.monitors:
             pcap_file = args.pcap if args.pcap != '' else None
