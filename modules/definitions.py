@@ -2,8 +2,6 @@ import socket
 from threading import Thread, Event
 from peewee import SqliteDatabase
 from modules.sniffer import IPSniff
-import logging
-logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import TCP, IP, IPv6, Packet
 from queue import Queue
 import os
@@ -15,13 +13,13 @@ class SniffThread(Thread):
     INSTANCE = None
 
     @staticmethod
-    def instance(iface=''):
+    def instance(iface='lo'):
         if SniffThread.INSTANCE is None:
             SniffThread.INSTANCE = SniffThread(iface=iface)
         return SniffThread.INSTANCE
 
-    def __init__(self, iface=''):
-        super().__init__(name="osm-sniffer")
+    def __init__(self, iface):
+        super().__init__()
         self.queue = []
         self.stopped = None
         self.iface = iface
@@ -45,7 +43,7 @@ class SniffThread(Thread):
     def run(self):
         self.sniffer = IPSniff(self.iface, callback=self.store_packet)
         self.sniffer.recv()
-        print("Producer Thread Stopped!")
+        print("Sniffer thread Stopped!")
 
 
 class MonitoringModule(Thread):
@@ -53,7 +51,7 @@ class MonitoringModule(Thread):
     MODE_IPV6 = 'inet6'
     TRAFFIC_OUTBOUND = 'out'
     TRAFFIC_INBOUND = 'in'
-    QUEUE_SIZE = 1000000
+    QUEUE_SIZE = 10000
     START_TIME = time.time()
     DATABASE = SqliteDatabase(None)
 
@@ -63,11 +61,10 @@ class MonitoringModule(Thread):
             return MonitoringModule.TRAFFIC_OUTBOUND
         return MonitoringModule.TRAFFIC_INBOUND
 
-    def __init__(self, interface='lo', filter='', mode=MODE_IPV4):
+    def __init__(self, interface='lo', mode=MODE_IPV4):
         super().__init__()
         self.stopped = Event()
         self.sniff_iface = interface
-        self.sniff_filter = filter
         self.sniff_thread = None
         self.queue = Queue(MonitoringModule.QUEUE_SIZE)
 
@@ -95,7 +92,8 @@ class MonitoringModule(Thread):
     def stop_execution(self):
         self.stopped.set()
 
-    def classify_packet(self, packet: Packet, port_map: dict) -> (str, str):
+    @staticmethod
+    def classify_packet(packet: Packet, port_map: dict) -> (str, str):
         port = None
 
         if TCP in packet:

@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 from cycler import cycler
-from datetime import datetime
 from functools import reduce
 from modules.definitions import MonitoringModule
 from modules.link_metering import LinkMetering, MeteringData
@@ -14,7 +13,6 @@ class DataPlotting:
 
     def __init__(self, db_path, services=list(LinkMetering.SERVICES)+['etc']):
         LinkMetering.init_db(db_path, create_tables=False)
-        self.date_format = '%H:%M:%S'
         self.services = services
 
     @staticmethod

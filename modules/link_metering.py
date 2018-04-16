@@ -1,12 +1,9 @@
-from contextlib import ExitStack
-from threading import Thread, Lock
-import logging
+from threading import Thread
 from modules.pcap import PcapWriter
 from scapy.layers.l2 import Ether
-logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from peewee import *
 from playhouse.sqlite_ext import JSONField
-from scapy.all import Packet, IPv6, IP
+from scapy.all import IPv6, IP
 from modules.definitions import MonitoringModule, DictTools
 import json
 import time
@@ -28,8 +25,8 @@ class LinkMetering(MonitoringModule):
 
     DEFAULT_INTERVAL = 1
 
-    def __init__(self, db_path, iface: str='wlp2s0', sniff_filter: str='tcp', interval: int=DEFAULT_INTERVAL, mode: str=MonitoringModule.MODE_IPV4, pcap: str=None):
-        super().__init__(iface, sniff_filter, mode)
+    def __init__(self, db_path, iface='lo', interval: int=DEFAULT_INTERVAL, pcap: str=None, **kwargs):
+        super().__init__(interface=iface, **kwargs)
         self.aux_thread_interval = interval
         self.port_mapping = DictTools.invert(LinkMetering.MAP)
         self.services = LinkMetering.MAP.keys()
@@ -68,7 +65,6 @@ class LinkMetering(MonitoringModule):
         # Packet without TCP Layer (subsequently, without destination port)
         elif traffic_type is not None:
             buffer['etc'] += plen
-
 
     def reset_buffer(self):
         inbound_buffer = MeteringData(type=MonitoringModule.TRAFFIC_INBOUND, **self.buffer_params)
@@ -121,11 +117,10 @@ class MeteringData(Model):
 
     class Meta:
         database = LinkMetering.DATABASE
-        table_name = 'link_usage'
 
-    def __init__(self, interface='', type=MonitoringModule.TRAFFIC_OUTBOUND, services=None,
-                 service_port_map=DictTools.invert(LinkMetering.MAP), interval=LinkMetering.DEFAULT_INTERVAL, **kwargs):
-        super(MeteringData, self).__init__(interface=interface, type=type, **kwargs)
+    def __init__(self, services=None, service_port_map=DictTools.invert(LinkMetering.MAP),
+                 interval=LinkMetering.DEFAULT_INTERVAL, **kwargs):
+        super(MeteringData, self).__init__(**kwargs)
         self.map = service_port_map
         self.interval = interval
         self.services = services
@@ -220,7 +215,6 @@ class LinkMeteringPersistence(Thread):
             for item in buffer:
                 buffer[item].time = exec_time
                 buffer[item].save()
-                #print(buffer[item])
             buffer.clear()
 
             if 0 < self.duration < exec_time:
