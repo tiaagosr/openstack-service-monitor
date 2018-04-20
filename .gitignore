@@ -1,3 +1,4 @@
+calculator.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -8,6 +9,7 @@ __pycache__/
 *.db
 *.iml
 *.pcap
+
 
 # C extensions
 *.so

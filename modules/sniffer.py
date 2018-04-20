@@ -3,7 +3,9 @@
 import socket, struct, os, array
 from threading import Event
 from scapy.layers.l2 import Ether
-from scapy.all import ETH_P_ALL, select, MTU
+from scapy.all import ETH_P_ALL, select
+
+MTU = 0xFFFF
 
 
 class IPSniff:
