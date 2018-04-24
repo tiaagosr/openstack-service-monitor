@@ -6,6 +6,7 @@ from scapy.data import ETH_P_ALL
 
 MTU = 0xFFFF
 
+#Socket Constant Missing in Python 3.6
 SO_RCVBUFFORCE = 33
 
 
@@ -21,7 +22,7 @@ class IPSniff:
         # for all packets going through a specific interface.
         self.ins = socket.socket(
             socket.AF_PACKET, socket.SOCK_RAW, socket.htons(ETH_P_ALL))
-        self.ins.setsockopt(socket.SOL_SOCKET, SO_RCVBUFFORCE, 2**26)
+        self.ins.setsockopt(socket.SOL_SOCKET, SO_RCVBUFFORCE, 2**30)
         self.ins.bind((self.interface_name, ETH_P_ALL))
 
     def recv(self):
