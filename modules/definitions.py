@@ -81,6 +81,15 @@ class MonitoringModule(Thread):
     def start_sniffing(self):
         self.sniffer.start_sniffing()
 
+    def stop_sniffing(self):
+        self.sniffer.terminate()
+        self.pipe.close()
+        self.sniffer.join()
+
+    def stop(self):
+        self.stop_sniffing()
+        self.stop_execution()
+
     def stop_execution(self):
         self.stopped.set()
 
