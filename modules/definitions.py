@@ -31,8 +31,7 @@ class PacketSniffer(mp.Process):
         self.start()
 
     def store_packet(self, direction, packet):
-        data = (direction, packet)
-        self.pipe.send(data)
+        self.pipe.send((direction, packet))
 
     def run(self):
         self.sniffer = IPSniff(self.iface, callback=self.store_packet)

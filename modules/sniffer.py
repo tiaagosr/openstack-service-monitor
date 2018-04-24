@@ -19,7 +19,7 @@ class IPSniff:
         # for all packets going through a specific interface.
         self.ins = socket.socket(
             socket.AF_PACKET, socket.SOCK_RAW, socket.htons(ETH_P_ALL))
-        self.ins.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 2**30)
+        #self.ins.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 2**30)
         self.ins.bind((self.interface_name, ETH_P_ALL))
 
     def recv(self):
@@ -28,6 +28,6 @@ class IPSniff:
 
         while not self.stop_cond.is_set():
 
-            pkt, sa_ll = self.ins.recvfrom(10485760)
+            pkt, sa_ll = self.ins.recvfrom(MTU)
 
             self.on_packet(sa_ll[2], pkt)
