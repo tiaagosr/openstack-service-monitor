@@ -19,27 +19,20 @@ class PacketSniffer(mp.Process):
             PacketSniffer.INSTANCE = PacketSniffer(iface)
         return PacketSniffer.INSTANCE
 
-    def __init__(self, iface):
+    def __init__(self, iface, data_pipe):
         super().__init__()
-        self.queue = None
+        self.pipe = data_pipe
         self.stopped = Event()
         self.iface = iface
         self.sniffer = None
         self.INSTANCE = self
 
-    def start_sniffing(self, shared_queue: mp.Queue) -> bool:
-        if self.queue is None:
-            self.queue = [shared_queue]
-            self.start()
-            return True
-        self.queue.append(shared_queue)
-        return False
+    def start_sniffing(self):
+        self.start()
 
     def store_packet(self, direction, packet):
         data = (direction, packet)
-        for q in self.queue:
-            if not q.full():
-                q.put(data)
+        self.pipe.send(data)
 
     def run(self):
         self.sniffer = IPSniff(self.iface, callback=self.store_packet)
@@ -52,7 +45,6 @@ class MonitoringModule(Thread):
     MODE_IPV6 = 'inet6'
     TRAFFIC_OUTBOUND = 'out'
     TRAFFIC_INBOUND = 'in'
-    QUEUE_SIZE = 100000
     START_TIME = time.time()
     DATABASE = SqliteDatabase(None)
 
@@ -66,9 +58,9 @@ class MonitoringModule(Thread):
         super().__init__()
         self.stopped = Event()
         self.sniff_iface = interface
-        self.sniff_thread = None
-        manager = mp.Manager()
-        self.queue = manager.Queue(self.QUEUE_SIZE)
+        recv_pipe, send_pipe = mp.Pipe(duplex=False)
+        self.sniffer = PacketSniffer(self.sniff_iface, send_pipe)
+        self.pipe = recv_pipe
 
         self.mode = mode
         if mode == MonitoringModule.MODE_IPV4:
@@ -88,8 +80,7 @@ class MonitoringModule(Thread):
         return os.popen(cmd).read().split(split)[1].split("/")[0]
     
     def start_sniffing(self):
-        self.sniff_thread = PacketSniffer(iface=self.sniff_iface)
-        self.sniff_thread.start_sniffing(self.queue)
+        self.sniffer.start_sniffing()
 
     def stop_execution(self):
         self.stopped.set()
@@ -100,10 +91,10 @@ class MonitoringModule(Thread):
 
         if TCP in packet:
             #packet port is the client dport or the server sport
-            if packet.dport in port_map:
-                port = packet.dport
-            else:
+            if packet.sport in port_map:
                 port = packet.sport
+            else:
+                port = packet.dport
 
         return port
 

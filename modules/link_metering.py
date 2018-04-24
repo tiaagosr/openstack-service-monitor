@@ -7,7 +7,6 @@ from scapy.layers.inet import IP
 from scapy.layers.inet6 import IPv6
 from modules.definitions import MonitoringModule, DictTools
 import json
-import time
 
 
 class LinkMetering(MonitoringModule):
@@ -80,18 +79,18 @@ class LinkMetering(MonitoringModule):
         if self.pcap is not None:
             pcap = PcapWriter(self.pcap)
         while not self.stopped.is_set():
-            if not self.queue.empty():
-                traffic_type, packet = self.queue.get()
-                # Write to pcap file if provided path
-                if pcap is not None:
-                    pcap.write(packet)
-                self.measure_packet(traffic_type, packet)
-            else:
+            traffic_type, packet = self.pipe.recv()
+            # Write to pcap file if provided path
+            if pcap is not None:
+                pcap.write(packet)
+            self.measure_packet(traffic_type, packet)
+            #else:
                 # Reduce CPU % Usage
-                time.sleep(0.001)
+                #time.sleep(0.001)
         if pcap is not None:
             pcap.flush()
             pcap.close()
+        self.pipe.close()
         print("Consumer Thread Stopped!")
 
     def start_monitoring(self):

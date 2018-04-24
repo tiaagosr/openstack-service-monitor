@@ -1,9 +1,8 @@
 # Based on code from https://askldjd.com/2014/01/15/a-reasonably-fast-python-ip-sniffer
 
-import socket, struct, os, array
+import socket
 from threading import Event
-from scapy.layers.l2 import Ether
-from scapy.all import ETH_P_ALL, select
+from scapy.data import ETH_P_ALL
 
 MTU = 0xFFFF
 
@@ -29,6 +28,6 @@ class IPSniff:
 
         while not self.stop_cond.is_set():
 
-            pkt, sa_ll = self.ins.recvfrom(MTU)
+            pkt, sa_ll = self.ins.recvfrom(10485760)
 
             self.on_packet(sa_ll[2], pkt)
