@@ -78,7 +78,7 @@ if __name__ == '__main__':
         if args.use_scenario:
             UseCase.apply_scenario(args.vm_count, args.state_list)
             if monitor_bandwidth is not None:
-                monitor_bandwidth.stop()
+                monitor_bandwidth.stop_execution()
     elif args.module == 'plot':
         categorized = category_map[args.data_type]
         traffic = direction_map[args.traffic_direction]

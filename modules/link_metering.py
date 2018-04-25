@@ -76,16 +76,10 @@ class LinkMetering(MonitoringModule):
     def run(self):
         self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.stopped, self.reset_buffer)
         pcap = None
-        processing = True
         if self.pcap is not None:
             pcap = PcapWriter(self.pcap)
-        while processing:
-            try:
-                traffic_type, packet = self.pipe.recv()
-            # Pipe closed and empty
-            except EOFError:
-                print("Consumer Thread Finished processing!")
-                processing = False
+        while not self.stopped.is_set():
+            traffic_type, packet = self.pipe.recv()
             # Write to pcap file if provided path
             if pcap is not None:
                 pcap.write(packet)
@@ -96,7 +90,7 @@ class LinkMetering(MonitoringModule):
         if pcap is not None:
             pcap.flush()
             pcap.close()
-        self.stop_sniffing()
+        self.pipe.close()
         print("Consumer Thread Stopped!")
 
     def start_monitoring(self):
