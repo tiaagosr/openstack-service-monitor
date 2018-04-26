@@ -26,7 +26,7 @@ class ApiLogging(MonitoringModule):
         sniff_filter = self.create_filter(self.port_mapping)
         super().__init__(interface=iface, sniff_filter=sniff_filter, **kwargs)
         self.services = list(ApiLogging.MAP.keys())
-        self._bind_ports_http()
+        #self._bind_ports_http()
         self.init_db(db_path)
 
     @staticmethod
