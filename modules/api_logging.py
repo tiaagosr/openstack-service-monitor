@@ -53,6 +53,7 @@ class ApiLogging(MonitoringModule):
 
     def measure_packet(self, packet_bytes):
         packet = Ether(packet_bytes)
+        packet = HTTP(packet)
         port = self.classify_packet(packet, self.port_mapping)
 
         print('Packet service: ', self.port_mapping[port])

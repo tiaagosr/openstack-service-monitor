@@ -45,7 +45,7 @@ class PortSniffer(mp.Process):
         self.start()
 
     def store_packet(self, packet):
-        self.pipe.send(bytes(packet))
+        self.pipe.send(packet)
 
     def run(self):
         self.sniffer = sniff(store=0, filter=self.sniff_filter, iface=self.iface, prn=self.store_packet)
