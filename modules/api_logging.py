@@ -51,7 +51,8 @@ class ApiLogging(MonitoringModule):
             bind_layers(TCP, HTTP, sport=port)
             bind_layers(TCP, HTTP, dport=port)
 
-    def measure_packet(self, packet):
+    def measure_packet(self, packet_bytes):
+        packet = Ether(packet_bytes)
         port = self.classify_packet(packet, self.port_mapping)
 
         print('Packet service: ', self.port_mapping[port])
