@@ -1,6 +1,7 @@
 import imports
 import argparse
 
+from modules.api_logging import ApiLogging
 from modules.definitions import MonitoringModule
 from modules.link_metering import LinkMetering
 #from modules.api_logging import ApiLogging
@@ -55,6 +56,12 @@ class UseCase:
         plot.metering_plot(plot_type=plot_type, categorized=categorized, traffic_type=traffic_type)
 
     @staticmethod
+    def log_api(db_path=db_file, iface='lo', **kwargs):
+        api_logging = ApiLogging(db_path=db_path, iface=iface, **kwargs)
+        api_logging.start_monitoring()
+        return api_logging
+
+    @staticmethod
     def apply_scenario(vm_count, state_list):
         scenario = ScenarioManager()
         scenario.authenticate()
@@ -67,18 +74,21 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.module == 'monitor':
         monitor_bandwidth = None
+        api_log = None
         ip_mode = mode_map[args.ip_mode]
         #Monitoring Modules
         if 'bandwidth' in args.monitors:
             pcap_file = args.pcap if args.pcap != '' else None
             monitor_bandwidth = UseCase.monitor_link(iface=args.iface, interval=args.interval, mode=ip_mode, pcap=pcap_file)
         if 'api' in args.monitors:
-            raise NotImplementedError("Api logging to be implemented!")
+            api_log = UseCase.log_api(iface=args.iface, mode=ip_mode)
         #Scenario
         if args.use_scenario:
             UseCase.apply_scenario(args.vm_count, args.state_list)
             if monitor_bandwidth is not None:
-                monitor_bandwidth.stop_execution()
+                monitor_bandwidth.stop_sniffing()
+            if api_log is not None:
+                api_log.stop_sniffing()
     elif args.module == 'plot':
         categorized = category_map[args.data_type]
         traffic = direction_map[args.traffic_direction]

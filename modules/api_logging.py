@@ -21,12 +21,23 @@ class ApiLogging(MonitoringModule):
         'ceph': {6789}
     }
 
-    def __init__(self, db_path, iface='lo'):
-        super().__init__(iface)
+    def __init__(self, db_path, iface='lo', **kwargs):
         self.port_mapping = DictTools.invert(ApiLogging.MAP)
-        self.services = ApiLogging.MAP.keys()
+        sniff_filter = self.create_filter(self.port_mapping)
+        super().__init__(interface=iface, sniff_filter=sniff_filter, **kwargs)
+        self.services = list(ApiLogging.MAP.keys())
         self._bind_ports_http()
         self.init_db(db_path)
+
+    @staticmethod
+    def create_filter(ports):
+        sniff_filter = 'tcp and inbound and ('
+        for i, p in enumerate(ports):
+            if i > 0:
+                sniff_filter += ' or'
+            sniff_filter += ' port '+str(p)
+        sniff_filter += ')'
+        return sniff_filter
 
     @staticmethod
     def init_db(path, create_tables=True):
@@ -40,27 +51,17 @@ class ApiLogging(MonitoringModule):
             bind_layers(TCP, HTTP, sport=port)
             bind_layers(TCP, HTTP, dport=port)
 
-    def measure_packet(self, traffic_type, packet_bytes):
-        packet = Ether(packet_bytes)
-        traffic_type = self.packet_type(traffic_type)
-
+    def measure_packet(self, packet):
         port = self.classify_packet(packet, self.port_mapping)
 
-        if port not in self.port_mapping:
-            return
-
-        print('Packet service: '+self.port_mapping[port]+' layer: '+packet.haslayer(Raw))
+        print('Packet service: ', self.port_mapping[port])
         packet.show()
         print('')
 
     def run(self):
         while not self.stopped.is_set():
-            if not self.queue.empty():
-                traffic_type, packet = self.queue.get()
-                self.measure_packet(traffic_type, packet)
-            else:
-                # Reduce CPU % Usage
-                time.sleep(0.001)
+            packet = self.pipe.recv()
+            self.measure_packet(packet)
         print("Consumer Thread Stopped!")
 
     def start_monitoring(self):
