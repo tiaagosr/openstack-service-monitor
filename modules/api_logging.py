@@ -143,7 +143,7 @@ class ApiData(Model):
 
     @staticmethod
     def map_action(packet):
-
+        pass
 
     def __init__(self, services=None, service_port_map=DictTools.invert(ApiLogging.MAP), **kwargs):
         super(ApiData, self).__init__(**kwargs)
