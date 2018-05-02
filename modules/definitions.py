@@ -5,7 +5,6 @@ from peewee import SqliteDatabase
 from modules.sniffer import IPSniff
 from scapy.layers.inet import IP, TCP, Packet
 from scapy.layers.inet6 import IPv6
-from scapy.all import sniff, hexdump
 import os
 import time
 
@@ -45,10 +44,11 @@ class PortSniffer(mp.Process):
         self.start()
 
     def store_packet(self, packet):
-        self.pipe.send(bytes(packet))
+        print(packet)
+        self.pipe.send(packet)
 
     def run(self):
-        self.sniffer = sniff(store=0, filter=self.sniff_filter, iface=self.iface, prn=self.store_packet)
+        #self.sniffer = sniff(store=0, filter=self.sniff_filter, iface=self.iface, prn=self.store_packet)
         print("Sniffer thread Stopped!")
 
 
@@ -72,10 +72,11 @@ class MonitoringModule(Thread):
         self.sniff_iface = interface
         recv_pipe, send_pipe = mp.Pipe(duplex=False)
         self.pipe = recv_pipe
-        if sniff_filter is not None:
-            self.sniffer = PortSniffer(interface, sniff_filter, send_pipe)
-        else:
-            self.sniffer = PacketSniffer(self.sniff_iface, send_pipe)
+        self.sniffer = PacketSniffer(self.sniff_iface, send_pipe)
+        #if sniff_filter is not None:
+            #self.sniffer = PortSniffer(interface, sniff_filter, send_pipe)
+        #else:
+            #self.sniffer = PacketSniffer(self.sniff_iface, send_pipe)
 
         self.mode = mode
         if mode == MonitoringModule.MODE_IPV4:

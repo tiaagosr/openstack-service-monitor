@@ -8,6 +8,51 @@ from scapy_http.http import *
 from threading import Thread, Timer, Event
 import time
 from modules.definitions import MonitoringModule, DictTools
+import re
+
+# BPF Filter for the sniffing socket. It listens for tcp packets in which dport contains values from ApiLogging.MAP.values()
+DEFAULT_API_BPF = [
+    [0x28, 0, 0, 0x0000000c],
+    [0x15, 0, 5, 0x000086dd],
+    [0x30, 0, 0, 0x00000014],
+    [0x15, 6, 0, 0x00000006],
+    [0x15, 0, 34, 0x0000002c],
+    [0x30, 0, 0, 0x00000036],
+    [0x15, 3, 32, 0x00000006],
+    [0x15, 0, 31, 0x00000800],
+    [0x30, 0, 0, 0x00000017],
+    [0x15, 0, 29, 0x00000006],
+    [0x28, 0, 0, 0xfffff004],
+    [0x15, 27, 0, 0x00000004],
+    [0x28, 0, 0, 0x0000000c],
+    [0x15, 0, 6, 0x000086dd],
+    [0x30, 0, 0, 0x00000014],
+    [0x15, 2, 0, 0x00000084],
+    [0x15, 1, 0, 0x00000006],
+    [0x15, 0, 21, 0x00000011],
+    [0x28, 0, 0, 0x00000038],
+    [0x15, 18, 10, 0x00002246],
+    [0x15, 0, 18, 0x00000800],
+    [0x30, 0, 0, 0x00000017],
+    [0x15, 2, 0, 0x00000084],
+    [0x15, 1, 0, 0x00000006],
+    [0x15, 0, 14, 0x00000011],
+    [0x28, 0, 0, 0x00000014],
+    [0x45, 12, 0, 0x00001fff],
+    [0xb1, 0, 0, 0x0000000e],
+    [0x48, 0, 0, 0x00000010],
+    [0x15, 8, 0, 0x00002246],
+    [0x15, 7, 0, 0x00001388],
+    [0x15, 6, 0, 0x00008a1d],
+    [0x15, 5, 0, 0x00001f90],
+    [0x15, 4, 0, 0x0000244c],
+    [0x15, 3, 0, 0x00002248],
+    [0x15, 2, 0, 0x000025e0],
+    [0x15, 1, 0, 0x00001a85],
+    [0x15, 0, 1, 0x00000050],
+    [0x6, 0, 0, 0x00040000],
+    [0x6, 0, 0, 0x00000000],
+]
 
 
 class ApiLogging(MonitoringModule):
@@ -18,7 +63,12 @@ class ApiLogging(MonitoringModule):
         'glance': {9292},
         'cinder': {8776},
         'neutron': {9696},
-        'ceph': {6789}
+        'ceph': {6789},
+        'http': {80, 8080}
+    }
+
+    REQUEST_MAP = {
+        
     }
 
     def __init__(self, db_path, iface='lo', **kwargs):
@@ -26,7 +76,7 @@ class ApiLogging(MonitoringModule):
         sniff_filter = self.create_filter(self.port_mapping)
         super().__init__(interface=iface, sniff_filter=sniff_filter, **kwargs)
         self.services = list(ApiLogging.MAP.keys())
-        #self._bind_ports_http()
+        self._bind_ports_http()
         self.init_db(db_path)
 
     @staticmethod
@@ -35,8 +85,9 @@ class ApiLogging(MonitoringModule):
         for i, p in enumerate(ports):
             if i > 0:
                 sniff_filter += ' or'
-            sniff_filter += ' port '+str(p)
+            sniff_filter += ' dst port '+str(p)
         sniff_filter += ')'
+        print(sniff_filter)
         return sniff_filter
 
     @staticmethod
@@ -46,17 +97,23 @@ class ApiLogging(MonitoringModule):
         if create_tables:
             ApiLogging.DATABASE.create_tables([ApiData])
 
+    @staticmethod
+    def parse_request(request):
+
+
     def _bind_ports_http(self):
         for port in self.port_mapping:
             bind_layers(TCP, HTTP, sport=port)
             bind_layers(TCP, HTTP, dport=port)
 
     def measure_packet(self, packet_bytes):
-        packet = Ether(packet_bytes)
-        packet = HTTP(packet)
+        #packet = Ether(packet_bytes)
+        packet = HTTP(packet_bytes)
+        if not packet.haslayer(HTTPRequest):
+            return
+
         port = self.classify_packet(packet, self.port_mapping)
 
-        print('Packet service: ', self.port_mapping[port])
         packet.show()
         print('')
 
