@@ -119,7 +119,7 @@ class ApiLogging(MonitoringModule):
 
     def run(self):
         while not self.stopped.is_set():
-            packet = self.pipe.recv()
+            direction, packet = self.pipe.recv()
             self.measure_packet(packet)
         print("Consumer Thread Stopped!")
 
