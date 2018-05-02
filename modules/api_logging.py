@@ -71,16 +71,16 @@ class ApiLogging(MonitoringModule):
         
     }
 
-    def __init__(self, db_path, iface='lo', **kwargs):
+    def __init__(self, db_path, iface, bpf=DEFAULT_API_BPF, **kwargs):
         self.port_mapping = DictTools.invert(ApiLogging.MAP)
-        sniff_filter = self.create_filter(self.port_mapping)
-        super().__init__(interface=iface, sniff_filter=sniff_filter, **kwargs)
+        super().__init__(interface=iface, **kwargs)
+        self.sniffer.add_filter(bpf)
         self.services = list(ApiLogging.MAP.keys())
         self._bind_ports_http()
         self.init_db(db_path)
 
     @staticmethod
-    def create_filter(ports):
+    def create_filter_string(ports):
         sniff_filter = 'tcp and inbound and ('
         for i, p in enumerate(ports):
             if i > 0:
@@ -99,7 +99,7 @@ class ApiLogging(MonitoringModule):
 
     @staticmethod
     def parse_request(request):
-
+        pass
 
     def _bind_ports_http(self):
         for port in self.port_mapping:
@@ -127,6 +127,7 @@ class ApiLogging(MonitoringModule):
         print("Logging API Access")
         self.start_sniffing()
         self.start()
+
 
 class ApiData(Model):
     interface = CharField()

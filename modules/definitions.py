@@ -14,18 +14,19 @@ class PacketSniffer(mp.Process):
     def __init__(self, iface, data_pipe):
         super().__init__()
         self.pipe = data_pipe
-        self.stopped = Event()
         self.iface = iface
-        self.sniffer = None
+        self.sniffer = IPSniff(self.iface, callback=self.store_packet)
 
     def start_sniffing(self):
         self.start()
+
+    def add_filter(self, socket_filter):
+        self.sniffer.add_filter(socket_filter)
 
     def store_packet(self, direction, packet):
         self.pipe.send((direction, packet))
 
     def run(self):
-        self.sniffer = IPSniff(self.iface, callback=self.store_packet)
         self.sniffer.recv()
         print("Sniffer thread Stopped!")
 
@@ -66,17 +67,13 @@ class MonitoringModule(Thread):
             return MonitoringModule.TRAFFIC_OUTBOUND
         return MonitoringModule.TRAFFIC_INBOUND
 
-    def __init__(self, interface='lo', mode=MODE_IPV4, sniff_filter=None):
+    def __init__(self, interface='lo', mode=MODE_IPV4):
         super().__init__()
         self.stopped = Event()
         self.sniff_iface = interface
         recv_pipe, send_pipe = mp.Pipe(duplex=False)
         self.pipe = recv_pipe
-        self.sniffer = PacketSniffer(self.sniff_iface, send_pipe)
-        #if sniff_filter is not None:
-            #self.sniffer = PortSniffer(interface, sniff_filter, send_pipe)
-        #else:
-            #self.sniffer = PacketSniffer(self.sniff_iface, send_pipe)
+        self.sniffer = PacketSniffer(interface, send_pipe)
 
         self.mode = mode
         if mode == MonitoringModule.MODE_IPV4:
@@ -105,9 +102,6 @@ class MonitoringModule(Thread):
 
     def stop(self):
         self.stop_sniffing()
-        self.stop_execution()
-
-    def stop_execution(self):
         self.stopped.set()
 
     @staticmethod

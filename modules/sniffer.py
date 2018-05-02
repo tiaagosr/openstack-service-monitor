@@ -104,14 +104,15 @@ class IPSniff:
         self.ins.setsockopt(socket.SOL_SOCKET, SO_RCVBUFFORCE, 2**30)
         self.ins.bind((self.interface_name, ETH_P_ALL))
 
-    def add_filter(self, filter=DEFAULT_FILTER):
-        if self.ins is not None:
-            attach_reject_filter(self.ins, filter)
+    def add_filter(self, bpf=DEFAULT_FILTER):
+        if self.ins is None:
+            raise AttributeError('Socket was not initialized')
+        attach_reject_filter(self.ins, bpf)
 
     def recv(self):
         if self.on_packet is None:
-            raise ReferenceError('Callback function was not provided!')
+            raise ReferenceError('Callback function missing!')
 
-        while not self.stop_cond.is_set():
+        while True:
             pkt, sa_ll = self.ins.recvfrom(MTU)
             self.on_packet(sa_ll[2], pkt)
