@@ -64,7 +64,7 @@ class ApiLogging(MonitoringModule):
         'cinder': {8776},
         'neutron': {9696},
         'ceph': {6789},
-        'http': {80, 8080}
+        #'http': {80, 8080}
     }
 
     REQUEST_MAP = {
@@ -77,6 +77,7 @@ class ApiLogging(MonitoringModule):
         self.sniffer.add_filter(bpf)
         self.services = list(ApiLogging.MAP.keys())
         self._bind_ports_http()
+        #self.create_filter_string(list(self.port_mapping.keys()))
         self.init_db(db_path)
 
     @staticmethod
@@ -107,13 +108,14 @@ class ApiLogging(MonitoringModule):
             bind_layers(TCP, HTTP, dport=port)
 
     def measure_packet(self, packet_bytes):
-        #packet = Ether(packet_bytes)
-        packet = HTTP(packet_bytes)
-        if not packet.haslayer(HTTPRequest):
+        packet = Ether(packet_bytes)
+        if not packet.haslayer(HTTP):
             return
+        print(re.search('GET', packet[HTTP].method))
+        port = packet.dport
 
-        port = self.classify_packet(packet, self.port_mapping)
-
+        new_entry = ApiData(services=self.services, service_port_map=self.port_mapping, interface=self.sniff_iface, time=self.execution_time())
+        new_entry.set_service(port)
         packet.show()
         print('')
 
@@ -131,20 +133,28 @@ class ApiLogging(MonitoringModule):
 
 class ApiData(Model):
     interface = CharField()
-    type = CharField()
     time = TimeField(formats='%H:%M:%S')
     content = JSONField(default={})
+    action = CharField()
     service = CharField()
 
     class Meta:
         database = ApiLogging.DATABASE
+
+    @staticmethod
+    def map_action(packet):
+
 
     def __init__(self, services=None, service_port_map=DictTools.invert(ApiLogging.MAP), **kwargs):
         super(ApiData, self).__init__(**kwargs)
         self.map = service_port_map
         self.services = services
 
-    def classify_port(self, port):
+    def set_service(self, port):
+        self.service = self.get_mapping(port)
+        return self
+
+    def get_mapping(self, port):
         if port in self.map:
             return self.map[port]
         return 'etc'
