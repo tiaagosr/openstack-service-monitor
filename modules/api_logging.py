@@ -110,7 +110,6 @@ class ApiLogging(MonitoringModule):
         packet = Ether(packet_bytes)
         if not packet.haslayer(HTTP):
             return
-        print(re.search('GET', str(packet.Method)))
         port = packet.dport
 
         new_entry = ApiData(services=self.services, service_port_map=self.port_mapping, interface=self.sniff_iface,
