@@ -8,6 +8,7 @@ from scapy_http.http import *
 from threading import Thread, Timer, Event
 import time
 from modules.definitions import MonitoringModule, DictTools
+from modules.api_mapper import get_action
 import re
 
 # BPF Filter for the sniffing socket. It listens for tcp packets in which dport contains values from ApiLogging.MAP.values()
@@ -64,11 +65,11 @@ class ApiLogging(MonitoringModule):
         'cinder': {8776},
         'neutron': {9696},
         'ceph': {6789},
-        #'http': {80, 8080}
+        # 'http': {80, 8080}
     }
 
     REQUEST_MAP = {
-        
+
     }
 
     def __init__(self, db_path, iface, bpf=DEFAULT_API_BPF, **kwargs):
@@ -77,7 +78,7 @@ class ApiLogging(MonitoringModule):
         self.sniffer.add_filter(bpf)
         self.services = list(ApiLogging.MAP.keys())
         self._bind_ports_http()
-        #self.create_filter_string(list(self.port_mapping.keys()))
+        # self.create_filter_string(list(self.port_mapping.keys()))
         self.init_db(db_path)
 
     @staticmethod
@@ -86,7 +87,7 @@ class ApiLogging(MonitoringModule):
         for i, p in enumerate(ports):
             if i > 0:
                 sniff_filter += ' or'
-            sniff_filter += ' dst port '+str(p)
+            sniff_filter += ' dst port ' + str(p)
         sniff_filter += ')'
         print(sniff_filter)
         return sniff_filter
@@ -114,8 +115,11 @@ class ApiLogging(MonitoringModule):
         print(re.search('GET', str(packet.Method)))
         port = packet.dport
 
-        new_entry = ApiData(services=self.services, service_port_map=self.port_mapping, interface=self.sniff_iface, time=self.execution_time())
+        new_entry = ApiData(services=self.services, service_port_map=self.port_mapping, interface=self.sniff_iface,
+                            time=self.execution_time())
         new_entry.set_service(port)
+        new_entry.set_action(packet)
+        new_entry.save()
         packet.show()
         print('')
 
@@ -159,8 +163,12 @@ class ApiData(Model):
             return self.map[port]
         return 'etc'
 
+    def set_action(self, packet):
+        self.action = get_action(self.service, packet)
+
     def content(self):
-        attrs = {'interface': self.interface, 'type': self.type, 'time': self.time, 'content': self.content, 'service': self.service}
+        attrs = {'interface': self.interface, 'type': self.type, 'time': self.time, 'content': self.content,
+                 'service': self.service}
         return attrs
 
     def __str__(self):
