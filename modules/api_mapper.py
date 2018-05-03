@@ -2,10 +2,12 @@ import re
 
 
 def equal(packet, attr, value):
+    print(getattr(packet, attr, None), " == ", value, " ?")
     return getattr(packet, attr, None) == value
 
 
 def regex(packet, attr, value):
+    print("is ", value, " in ", str(getattr(packet, attr, None)), " ?")
     return bool(re.search(value, str(getattr(packet, attr, None))))
 
 
