@@ -159,6 +159,7 @@ class ApiData(Model):
         return self
 
     def get_mapping(self, port):
+        print(self.map)
         if port in self.map:
             return self.map[port]
         return 'etc'
