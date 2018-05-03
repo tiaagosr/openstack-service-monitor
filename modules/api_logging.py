@@ -112,15 +112,12 @@ class ApiLogging(MonitoringModule):
             return
         print(re.search('GET', str(packet.Method)))
         port = packet.dport
-        print(port)
 
         new_entry = ApiData(services=self.services, service_port_map=self.port_mapping, interface=self.sniff_iface,
                             time=self.execution_time())
         new_entry.set_service(port)
         new_entry.set_action(packet)
         new_entry.save()
-        packet.show()
-        print('')
 
     def run(self):
         while not self.stopped.is_set():
@@ -158,7 +155,6 @@ class ApiData(Model):
         return self
 
     def get_mapping(self, port):
-        print(self.map)
         if port in self.map:
             return self.map[port]
         return 'etc'
