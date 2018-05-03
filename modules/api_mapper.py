@@ -14,13 +14,20 @@ def regex(packet, attr, value):
 ACTIONS = dict()
 
 ACTIONS['nova'] = [
+    #Options
+    {
+        'action': 'OPTIONS',
+        'requirement': [
+            ('Method', 'OPTIONS', equal),
+            ('Path', '/\Z', regex)
+        ]},
+
     # VM Main Actions
     {
         'requirement': [
             ('Path', '/servers/?\Z', regex),
         ],
         'actions': [
-            {'action': 'List VMs', 'requirement': ('Method', 'GET', equal)},
             {'action': 'Create VM', 'requirement': ('Method', 'POST', equal)},
         ]},
 
@@ -29,9 +36,15 @@ ACTIONS['nova'] = [
             ('Path', '/servers/[a-zA-Z0-9_-]+/?\Z', regex),
         ],
         'actions': [
-            {'action': 'Show VM Details', 'requirement': ('Method', 'GET', equal)},
             {'action': 'Change VM Config', 'requirement': ('Method', 'PUT', equal)},
             {'action': 'Delete VM', 'requirement': ('Method', 'DELETE', equal)},
+        ]},
+
+    {
+        'action': 'Get vm info',
+        'requirement': [
+            ('Path', '/servers(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Method', 'GET', equal),
         ]},
 
     # VM States
@@ -98,11 +111,25 @@ ACTIONS['nova'] = [
         ],
         'actions': [
             {'action': 'Create Flavor', 'requirement': ('Method', 'POST', equal)},
-            {'action': 'List Flavors', 'requirement': ('Method', 'GET', equal)},
+        ]},
+
+    {
+        'action': 'Get flavor info',
+        'requirement': [
+            ('Path', '/flavors(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Method', 'GET', equal),
         ]},
 ]
 
 ACTIONS['glance'] = [
+    #Options
+    {
+        'action': 'OPTIONS',
+        'requirement': [
+            ('Method', 'OPTIONS', equal),
+            ('Path', '/\Z', regex)
+        ]},
+
     {
         'action': 'Healthcheck',
         'requirement': [
@@ -118,7 +145,13 @@ ACTIONS['glance'] = [
         'actions': [
             {'action': 'Update Image', 'requirement': ('Method', 'PATCH', equal)},
             {'action': 'Delete Image', 'requirement': ('Method', 'DELETE', equal)},
-            {'action': 'Show Image details', 'requirement': ('Method', 'GET', equal)},
+        ]},
+
+    {
+        'action': 'Get image info',
+        'requirement': [
+            ('Path', '/v2\.0/images(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Method', 'GET', equal),
         ]},
 
     {
@@ -127,94 +160,128 @@ ACTIONS['glance'] = [
         ],
         'actions': [
             {'action': 'Create Image', 'requirement': ('Method', 'POST', equal)},
-            {'action': 'List Images', 'requirement': ('Method', 'GET', equal)},
         ]},
 ]
 
 ACTIONS['neutron'] = [
+    #Options
+    {
+        'action': 'OPTIONS',
+        'requirement': [
+            ('Method', 'OPTIONS', equal),
+            ('Path', '/\Z', regex)
+        ]},
 
     #Network Actions
     {
         'requirement': [
-            ('Path', '/v2\.0/networks/[a-zA-Z0-9_-]+/?\Z', regex),
+            ('Path', '/v2\.0/networks(?:\.json/[a-zA-Z0-9_-]+/?\Z)', regex),
         ],
         'actions': [
             {'action': 'Update Network', 'requirement': ('Method', 'PUT', equal)},
             {'action': 'Delete Network', 'requirement': ('Method', 'DELETE', equal)},
-            {'action': 'Show Network', 'requirement': ('Method', 'GET', equal)},
+        ]},
+
+    {
+        'action': 'Get network info',
+        'requirement': [
+            ('Path', '/v2\.0/networks(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Method', 'GET', equal),
         ]},
 
     {
         'requirement': [
             ('Path', '/v2\.0/networks/?\Z', regex),
+            ('Method', 'POST', equal)
         ],
-        'actions': [
-            {'action': 'Create Network', 'requirement': ('Method', 'POST', equal)},
-            {'action': 'List Networks', 'requirement': ('Method', 'GET', equal)},
-        ]},
+        'action': 'Create network'
+    },
 
     #Port Actions
     {
         'requirement': [
-            ('Path', '/v2\.0/ports/[a-zA-Z0-9_-]+/?\Z', regex),
+            ('Path', '/v2\.0/ports(?:\.json/[a-zA-Z0-9_-]+/?\Z)', regex),
         ],
         'actions': [
             {'action': 'Update Port', 'requirement': ('Method', 'PUT', equal)},
             {'action': 'Delete Port', 'requirement': ('Method', 'DELETE', equal)},
-            {'action': 'Show Port', 'requirement': ('Method', 'GET', equal)},
+        ]},
+
+    {
+        'action': 'Get port info',
+        'requirement': [
+            ('Path', '/v2\.0/ports(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Method', 'GET', equal),
         ]},
 
     {
         'requirement': [
-            ('Path', '/v2\.0/ports/?\Z', regex),
+            ('Path', '/v2\.0/port/?\Z', regex),
+            ('Method', 'POST', equal)
         ],
-        'actions': [
-            {'action': 'Create Port', 'requirement': ('Method', 'POST', equal)},
-            {'action': 'List Ports', 'requirement': ('Method', 'GET', equal)},
-        ]},
+        'action': 'Create port'
+    },
 
     #L3 Address Scope
     {
         'requirement': [
-            ('Path', '/v2\.0/address-scopes/[a-zA-Z0-9_-]+/?\Z', regex),
+            ('Path', '/v2\.0/adresses-scopes(?:\.json/[a-zA-Z0-9_-]+/?\Z)', regex),
         ],
         'actions': [
-            {'action': 'Update address scope', 'requirement': ('Method', 'PUT', equal)},
-            {'action': 'Delete address scope', 'requirement': ('Method', 'DELETE', equal)},
-            {'action': 'Show address scope', 'requirement': ('Method', 'GET', equal)},
+            {'action': 'Update adress scope', 'requirement': ('Method', 'PUT', equal)},
+            {'action': 'Delete adress scope', 'requirement': ('Method', 'DELETE', equal)},
+        ]},
+
+    {
+        'action': 'Get adress scope info',
+        'requirement': [
+            ('Path', '/v2\.0/adresses-scopes(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Method', 'GET', equal),
         ]},
 
     {
         'requirement': [
-            ('Path', '/v2\.0/address-scopes/?\Z', regex),
+            ('Path', '/v2\.0/adresses-scopes/?\Z', regex),
+            ('Method', 'POST', equal)
         ],
-        'actions': [
-            {'action': 'Create address scope', 'requirement': ('Method', 'POST', equal)},
-            {'action': 'List address scope', 'requirement': ('Method', 'GET', equal)},
-        ]},
+        'action': 'Create address scope'
+    },
 
     #L3 Floating IP
     {
         'requirement': [
-            ('Path', '/v2\.0/address-scopes/[a-zA-Z0-9_-]+/?\Z', regex),
+            ('Path', '/v2\.0/floatingips(?:\.json/[a-zA-Z0-9_-]+/?\Z)', regex),
         ],
         'actions': [
-            {'action': 'Update address scope', 'requirement': ('Method', 'PUT', equal)},
-            {'action': 'Delete address scope', 'requirement': ('Method', 'DELETE', equal)},
-            {'action': 'Show address scope', 'requirement': ('Method', 'GET', equal)},
+            {'action': 'Update floating IP', 'requirement': ('Method', 'PUT', equal)},
+            {'action': 'Delete floating IP', 'requirement': ('Method', 'DELETE', equal)},
+        ]},
+
+    {
+        'action': 'Get floating IP info',
+        'requirement': [
+            ('Path', '/v2\.0/floatingips(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Method', 'GET', equal),
         ]},
 
     {
         'requirement': [
-            ('Path', '/v2\.0/address-scopes/?\Z', regex),
+            ('Path', '/v2\.0/floatingips/?\Z', regex),
+            ('Method', 'POST', equal)
         ],
-        'actions': [
-            {'action': 'Create address scope', 'requirement': ('Method', 'POST', equal)},
-            {'action': 'List address scope', 'requirement': ('Method', 'GET', equal)},
-        ]},
+        'action': 'Create floating IP'
+    },
 ]
 
 ACTIONS['cinder'] = [
+    #Options
+    {
+        'action': 'OPTIONS',
+        'requirement': [
+            ('Method', 'OPTIONS', equal),
+            ('Path', '/\Z', regex)
+        ]},
+
     #Volume
     {
         'requirement': [
@@ -223,7 +290,13 @@ ACTIONS['cinder'] = [
         'actions': [
             {'action': 'Update volume', 'requirement': ('Method', 'PUT', equal)},
             {'action': 'Delete volume', 'requirement': ('Method', 'DELETE', equal)},
-            {'action': 'Show volume details', 'requirement': ('Method', 'GET', equal)},
+        ]},
+
+    {
+        'action': 'Get volume info',
+        'requirement': [
+            ('Path', '/v3/volumes(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Method', 'GET', equal),
         ]},
 
     {
@@ -232,7 +305,6 @@ ACTIONS['cinder'] = [
         ],
         'actions': [
             {'action': 'Create volume', 'requirement': ('Method', 'POST', equal)},
-            {'action': 'List volumes', 'requirement': ('Method', 'GET', equal)},
         ]},
 
     # Volume metadata
@@ -324,6 +396,22 @@ ACTIONS['cinder'] = [
 
 ACTIONS['keystone'] = [
 
+    #Options
+    {
+        'action': 'OPTIONS',
+        'requirement': [
+            ('Method', 'OPTIONS', equal),
+            ('Path', '/\Z', regex)
+        ]},
+
+    #Healthcheck
+    {
+        'action': 'Healthcheck',
+        'requirement': [
+            ('Method', 'GET', equal),
+            ('Path', '/v3\Z', regex)
+        ]},
+
     # Authenticate
     {
         'requirement': [
@@ -337,10 +425,17 @@ ACTIONS['keystone'] = [
         ]},
 
     {
-        'action': 'Get Service Catalog',
+        'action': 'Validate and show token information',
         'requirement': [
             ('Method', 'GET', equal),
-            ('Path', '/v3/auth/catalog/?\Z', regex)
+            ('Path', '/v3/auth/tokens/?\Z', regex)
+        ]},
+
+    {
+        'action': 'Get Service Catalog',
+        'requirement': [
+            ('Path', '/v3/auth/catalog(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Method', 'GET', equal),
         ]},
 
 
@@ -371,7 +466,13 @@ ACTIONS['keystone'] = [
         'actions': [
             {'action': 'Update credential', 'requirement': ('Method', 'PUT', equal)},
             {'action': 'Delete crede/v3/credentialsntial', 'requirement': ('Method', 'DELETE', equal)},
-            {'action': 'Show credential details', 'requirement': ('Method', 'GET', equal)},
+        ]},
+
+    {
+        'action': 'Get credential info',
+        'requirement': [
+            ('Path', '/v3/credentials(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Method', 'GET', equal),
         ]},
 
     {
@@ -380,7 +481,6 @@ ACTIONS['keystone'] = [
         ],
         'actions': [
             {'action': 'Create credential', 'requirement': ('Method', 'POST', equal)},
-            {'action': 'List credentials', 'requirement': ('Method', 'GET', equal)},
         ]},
 
     # Projects
@@ -391,7 +491,13 @@ ACTIONS['keystone'] = [
         'actions': [
             {'action': 'Update project', 'requirement': ('Method', 'PUT', equal)},
             {'action': 'Delete project', 'requirement': ('Method', 'DELETE', equal)},
-            {'action': 'Show project details', 'requirement': ('Method', 'GET', equal)},
+        ]},
+
+    {
+        'action': 'Get project info',
+        'requirement': [
+            ('Path', '/v3/projects(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Method', 'GET', equal),
         ]},
 
     {
@@ -400,7 +506,6 @@ ACTIONS['keystone'] = [
         ],
         'actions': [
             {'action': 'Create project', 'requirement': ('Method', 'POST', equal)},
-            {'action': 'List projects', 'requirement': ('Method', 'GET', equal)},
         ]},
 ]
 
