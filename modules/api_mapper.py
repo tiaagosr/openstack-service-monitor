@@ -415,13 +415,12 @@ def get_action(service, packet, api_map=ACTIONS):
 def verify_resource(packet, resource):
     reqs = resource['requirement']
     for req in reqs:
-        req_tuple = reqs[req]
-        if not req_tuple[2](packet, req_tuple[0], req_tuple[1]):
+        if not req[2](packet, req[0], req[1]):
             return None
     if 'action' in resource:
         return resource['action']
-    for action in resource['actions']:
-        req_tuple = action['requirement']
-        if req_tuple[2](packet, req_tuple[0], req_tuple[1]):
-            return action['action']
+    for entry in resource['actions']:
+        req = entry['requirement']
+        if req[2](packet, req[0], req[1]):
+            return entry['action']
     return None
