@@ -114,6 +114,7 @@ class ApiLogging(MonitoringModule):
             return
         print(re.search('GET', str(packet.Method)))
         port = packet.dport
+        print(port)
 
         new_entry = ApiData(services=self.services, service_port_map=self.port_mapping, interface=self.sniff_iface,
                             time=self.execution_time())
