@@ -43,7 +43,7 @@ ACTIONS['nova'] = [
     {
         'action': 'Get vm info',
         'requirement': [
-            ('Path', '/servers(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Path', '/servers(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+(?:\&[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 
@@ -116,7 +116,7 @@ ACTIONS['nova'] = [
     {
         'action': 'Get flavor info',
         'requirement': [
-            ('Path', '/flavors(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Path', '/flavors(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+(?:\&[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 ]
@@ -150,7 +150,7 @@ ACTIONS['glance'] = [
     {
         'action': 'Get image info',
         'requirement': [
-            ('Path', '/v2\.0/images(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Path', '/v2\.0/images(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+(?:\&[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 
@@ -185,7 +185,7 @@ ACTIONS['neutron'] = [
     {
         'action': 'Get network info',
         'requirement': [
-            ('Path', '/v2\.0/networks(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Path', '/v2\.0/networks(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+(?:\&[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 
@@ -210,7 +210,7 @@ ACTIONS['neutron'] = [
     {
         'action': 'Get port info',
         'requirement': [
-            ('Path', '/v2\.0/ports(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Path', '/v2\.0/ports(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+(?:\&[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 
@@ -235,7 +235,7 @@ ACTIONS['neutron'] = [
     {
         'action': 'Get adress scope info',
         'requirement': [
-            ('Path', '/v2\.0/adresses-scopes(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Path', '/v2\.0/adresses-scopes(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+(?:\&[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 
@@ -260,7 +260,7 @@ ACTIONS['neutron'] = [
     {
         'action': 'Get floating IP info',
         'requirement': [
-            ('Path', '/v2\.0/floatingips(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Path', '/v2\.0/floatingips(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+(?:\&[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 
@@ -295,7 +295,7 @@ ACTIONS['cinder'] = [
     {
         'action': 'Get volume info',
         'requirement': [
-            ('Path', '/v3/volumes(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Path', '/v3/volumes(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+(?:\&[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 
@@ -434,7 +434,7 @@ ACTIONS['keystone'] = [
     {
         'action': 'Get Service Catalog',
         'requirement': [
-            ('Path', '/v3/auth/catalog(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Path', '/v3/auth/catalog(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+(?:\&[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 
@@ -471,7 +471,7 @@ ACTIONS['keystone'] = [
     {
         'action': 'Get credential info',
         'requirement': [
-            ('Path', '/v3/credentials(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Path', '/v3/credentials(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+(?:\&[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 
@@ -496,7 +496,7 @@ ACTIONS['keystone'] = [
     {
         'action': 'Get project info',
         'requirement': [
-            ('Path', '/v3/projects(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+(?:\&[a-zA-Z0-9_-]+=[a-zA-Z0-9_-]+)*)?\Z)', regex),
+            ('Path', '/v3/projects(?:/?\Z|\.json(?:\?[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+(?:\&[a-zA-Z0-9_-\%]+=[a-zA-Z0-9_-\%]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 
