@@ -239,12 +239,29 @@ ACTIONS['neutron'] = [
             ('Method', 'GET', equal),
         ]},
 
+    #Subnet
     {
         'requirement': [
-            ('Path', '/v2\.0/adresses-scopes/?\Z', regex),
+            ('Path', '/v2\.0/subnets(?:\.json/[a-zA-Z0-9_-]+/?\Z)', regex),
+        ],
+        'actions': [
+            {'action': 'Update Subnet', 'requirement': ('Method', 'PUT', equal)},
+            {'action': 'Delete Subnet', 'requirement': ('Method', 'DELETE', equal)},
+        ]},
+
+    {
+        'action': 'Get Subnet info',
+        'requirement': [
+            ('Path', '/v2\.0/subnets(?:/?\Z|\.json(?:\?[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+(?:\&[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+)*)?\Z)', regex),
+            ('Method', 'GET', equal),
+        ]},
+
+    {
+        'requirement': [
+            ('Path', '/v2\.0/subnets/?\Z', regex),
             ('Method', 'POST', equal)
         ],
-        'action': 'Create address scope'
+        'action': 'Create Subnet'
     },
 
     #L3 Floating IP
