@@ -7,6 +7,8 @@ from scapy.data import ETH_P_ALL
 
 MTU = 0xFFFF
 
+DEFAULT_BUFFER_SIZE = 2**24
+
 #Socket Constant Missing in Python 3.6
 SO_RCVBUFFORCE = 33
 SO_ATTACH_FILTER = 26
@@ -96,12 +98,12 @@ class IPSniff:
         self.interface_name = interface_name
         self.on_packet = callback
         self.stop_cond = stop_cond
+        self.socket_buffer = DEFAULT_BUFFER_SIZE
 
         # The raw in (listen) socket is a L2 raw socket that listens
         # for all packets going through a specific interface.
         self.ins = socket.socket(
             socket.AF_PACKET, socket.SOCK_RAW, socket.htons(ETH_P_ALL))
-        self.ins.setsockopt(socket.SOL_SOCKET, SO_RCVBUFFORCE, 2**30)
         self.ins.bind((self.interface_name, ETH_P_ALL))
 
     def add_filter(self, bpf=DEFAULT_FILTER):
@@ -109,7 +111,11 @@ class IPSniff:
             raise AttributeError('Socket was not initialized')
         attach_reject_filter(self.ins, bpf)
 
+    def set_buffer_size(self, size: int):
+        self.socket_buffer = size
+
     def recv(self):
+        self.ins.setsockopt(socket.SOL_SOCKET, SO_RCVBUFFORCE, self.socket_buffer)
         if self.on_packet is None:
             raise ReferenceError('Callback function missing!')
 

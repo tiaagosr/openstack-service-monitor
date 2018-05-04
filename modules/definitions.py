@@ -31,29 +31,7 @@ class PacketSniffer(mp.Process):
         print("Sniffer thread Stopped!")
 
 
-class PortSniffer(mp.Process):
-
-    def __init__(self, iface, sniff_filter, data_pipe):
-        super().__init__()
-        self.pipe = data_pipe
-        self.stopped = Event()
-        self.iface = iface
-        self.sniff_filter = sniff_filter
-        self.sniffer = None
-
-    def start_sniffing(self):
-        self.start()
-
-    def store_packet(self, packet):
-        print(packet)
-        self.pipe.send(packet)
-
-    def run(self):
-        #self.sniffer = sniff(store=0, filter=self.sniff_filter, iface=self.iface, prn=self.store_packet)
-        print("Sniffer thread Stopped!")
-
-
-class MonitoringModule(Thread):
+class MonitoringModule(mp.Process):
     MODE_IPV4 = 'inet'
     MODE_IPV6 = 'inet6'
     TRAFFIC_OUTBOUND = 'out'
@@ -88,7 +66,7 @@ class MonitoringModule(Thread):
 
     @staticmethod
     def iface_ip(iface: str, mode=MODE_IPV4) -> str:
-        cmd = 'ip addr show '+iface
+        cmd = 'ip addr show ' + iface
         split = mode + ' '
         return os.popen(cmd).read().split(split)[1].split("/")[0]
 
@@ -107,9 +85,8 @@ class MonitoringModule(Thread):
     @staticmethod
     def classify_packet(packet: Packet, port_map: dict) -> str:
         port = None
-
         if TCP in packet:
-            #packet port is the client dport or the server sport
+            # packet port is the client dport or the server sport
             if packet.sport in port_map:
                 port = packet.sport
             else:
@@ -120,7 +97,7 @@ class MonitoringModule(Thread):
 
 class DictTools:
     @staticmethod
-    def add_multiple_key_single_value(keys: list=[], value=None, dictionary: dict={}):
+    def add_multiple_key_single_value(keys: list = [], value=None, dictionary: dict = {}):
         for key in keys:
             dictionary[key] = value
 

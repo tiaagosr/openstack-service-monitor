@@ -25,9 +25,12 @@ class LinkMetering(MonitoringModule):
 
     DEFAULT_INTERVAL = 1
 
+    DEFAULT_BUFFER_SIZE = 2**30  # 1024MB
+
     def __init__(self, db_path, iface='lo', interval: int=DEFAULT_INTERVAL, pcap: str=None, **kwargs):
         super().__init__(interface=iface, **kwargs)
         self.aux_thread_interval = interval
+        self.sniffer.set_buffer_size(LinkMetering.DEFAULT_BUFFER_SIZE)
         self.port_mapping = DictTools.invert(LinkMetering.MAP)
         self.services = LinkMetering.MAP.keys()
         self.buffer_params = {'interface': self.sniff_iface, 'services': self.services, 'interval': self.aux_thread_interval, 'service_port_map': self.port_mapping}
@@ -84,14 +87,11 @@ class LinkMetering(MonitoringModule):
             if pcap is not None:
                 pcap.write(packet)
             self.measure_packet(traffic_type, packet)
-            #else:
-                # Reduce CPU % Usage
-                #time.sleep(0.001)
         if pcap is not None:
             pcap.flush()
             pcap.close()
-        self.pipe.close()
-        print("Consumer Thread Stopped!")
+        self.stop()
+        print("Metering analysis finished!")
 
     def start_monitoring(self):
         print("Metering link usage, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)
@@ -194,12 +194,9 @@ class LinkMeteringPersistence(Thread):
         self.buffer = None
         self.interval = None
         self.buffer_reset = None
-        self.buffer_context = None
-        self.duration = -1
 
-    def timed_storage(self, buffer, interval, stop_event, buffer_reset, duration=-1):
+    def timed_storage(self, buffer, interval, stop_event, buffer_reset):
         self.buffer = buffer
-        self.duration = duration
         self.buffer_reset = buffer_reset
         self.interval = interval
         self.stopped = stop_event
@@ -216,7 +213,3 @@ class LinkMeteringPersistence(Thread):
                 buffer[item].time = exec_time
                 buffer[item].save()
             buffer.clear()
-
-            if 0 < self.duration < exec_time:
-                print("Stop execution!")
-                self.stopped.set()

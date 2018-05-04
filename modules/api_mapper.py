@@ -409,6 +409,9 @@ ACTIONS['cinder'] = [
             {'action': 'List backups for project', 'requirement': ('Method', 'GET', equal)},
         ]},
 
+    # Method    = 'GET'
+    # Path      = '/v1/86fc2178701a4bfea5ca69c5ee5314cc/volumes/detail?all_tenants=1'
+
 ]
 
 ACTIONS['keystone'] = [
@@ -446,6 +449,25 @@ ACTIONS['keystone'] = [
         'requirement': [
             ('Method', 'GET', equal),
             ('Path', '/v3/auth/tokens/?\Z', regex)
+        ]},
+
+    # Authenticate V2
+    {
+        'requirement': [
+            ('Path', '/v2/auth/tokens/?\Z', regex),
+            ('Method', 'POST', equal)
+        ],
+        'actions': [
+            {'action': 'Password Auth', 'requirement': ('load', '"password"', regex)},
+            {'action': 'Token Auth', 'requirement': ('load', '"token"', regex)},
+            {'action': 'Application credential Auth', 'requirement': ('load', '"application_credential"', regex)},
+        ]},
+
+    {
+        'action': 'Validate and show token information',
+        'requirement': [
+            ('Method', 'GET', equal),
+            ('Path', '/v2/auth/tokens/?\Z', regex)
         ]},
 
     {

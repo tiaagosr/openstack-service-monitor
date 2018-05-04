@@ -1,15 +1,9 @@
 from peewee import *
 from playhouse.sqlite_ext import JSONField
-from scapy.packet import Raw, bind_layers
 from scapy.layers.l2 import Ether
-from scapy.layers.inet import IP, TCP, Packet
-from scapy.layers.inet6 import IPv6
 from scapy_http.http import *
-from threading import Thread, Timer, Event
-import time
-from modules.definitions import MonitoringModule, DictTools
 from modules.api_mapper import get_action
-import re
+from modules.definitions import MonitoringModule, DictTools
 
 # BPF Filter for the sniffing socket. It listens for tcp packets in which dport contains values from ApiLogging.MAP.values()
 DEFAULT_API_BPF = [
@@ -121,7 +115,8 @@ class ApiLogging(MonitoringModule):
         while not self.stopped.is_set():
             direction, packet = self.pipe.recv()
             self.measure_packet(packet)
-        print("Consumer Thread Stopped!")
+        self.stop()
+        print("API Logging finished!")
 
     def start_monitoring(self):
         print("Logging API Access")
