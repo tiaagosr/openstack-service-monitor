@@ -3,7 +3,7 @@ from playhouse.sqlite_ext import JSONField
 from scapy.layers.l2 import Ether
 from scapy_http.http import *
 from modules.api_mapper import get_action
-from modules.definitions import MonitoringModule, DictTools
+from modules.definitions import MonitoringModule, DictTools, MonitoringSession
 
 # BPF Filter for the sniffing socket. It listens for tcp packets in which dport contains values from ApiLogging.MAP.values()
 DEFAULT_API_BPF = [
@@ -63,14 +63,14 @@ class ApiLogging(MonitoringModule):
 
     }
 
-    def __init__(self, db_path, iface, bpf=DEFAULT_API_BPF, **kwargs):
+    def __init__(self, bpf=DEFAULT_API_BPF, **kwargs):
         self.port_mapping = DictTools.invert(ApiLogging.MAP)
-        super().__init__(interface=iface, **kwargs)
+        super().__init__(**kwargs)
         self.sniffer.add_filter(bpf)
         self.services = list(ApiLogging.MAP.keys())
         self._bind_ports_http()
         # self.create_filter_string(list(self.port_mapping.keys()))
-        self.init_db(db_path)
+        self.init_db(self.db_path)
 
     @staticmethod
     def create_filter_string(ports):
@@ -84,15 +84,10 @@ class ApiLogging(MonitoringModule):
         return sniff_filter
 
     @staticmethod
-    def init_db(path, create_tables=True):
+    def init_db(path):
         ApiLogging.DATABASE.init(path)
         ApiLogging.DATABASE.connect()
-        if create_tables:
-            ApiLogging.DATABASE.create_tables([ApiData])
-
-    @staticmethod
-    def parse_request(request):
-        pass
+        ApiLogging.DATABASE.create_tables([ApiData])
 
     def _bind_ports_http(self):
         for port in self.port_mapping:
@@ -106,16 +101,22 @@ class ApiLogging(MonitoringModule):
         port = packet.dport
 
         new_entry = ApiData(services=self.services, service_port_map=self.port_mapping, interface=self.sniff_iface,
-                            time=self.execution_time())
+                            time=self.execution_time(), session=self.session)
         new_entry.set_service(port)
         new_entry.set_action(packet)
         new_entry.save()
 
     def run(self):
-        while not self.stopped.is_set():
-            direction, packet = self.pipe.recv()
+        while True:
+            try:
+                traffic_type, packet = self.conn.recv()
+            except EOFError:
+                break
+            # Producer finished sniffing
+            if packet is None:
+                break
             self.measure_packet(packet)
-        self.stop()
+        self.cleanup()
         print("API Logging finished!")
 
     def start_monitoring(self):
@@ -125,7 +126,7 @@ class ApiLogging(MonitoringModule):
 
 
 class ApiData(Model):
-    interface = CharField()
+    session = ForeignKeyField(MonitoringSession, backref='api_log')
     time = TimeField(formats='%H:%M:%S')
     content = JSONField(default={})
     action = CharField()
@@ -133,10 +134,6 @@ class ApiData(Model):
 
     class Meta:
         database = ApiLogging.DATABASE
-
-    @staticmethod
-    def map_action(packet):
-        pass
 
     def __init__(self, services=None, service_port_map=DictTools.invert(ApiLogging.MAP), **kwargs):
         super(ApiData, self).__init__(**kwargs)

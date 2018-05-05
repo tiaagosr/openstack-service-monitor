@@ -5,7 +5,7 @@ from playhouse.sqlite_ext import JSONField
 from scapy.layers.l2 import Ether
 from scapy.layers.inet import IP
 from scapy.layers.inet6 import IPv6
-from modules.definitions import MonitoringModule, DictTools
+from modules.definitions import MonitoringModule, DictTools, MonitoringSession
 import json
 
 
@@ -27,25 +27,24 @@ class LinkMetering(MonitoringModule):
 
     DEFAULT_BUFFER_SIZE = 2**30  # 1024MB
 
-    def __init__(self, db_path, iface='lo', interval: int=DEFAULT_INTERVAL, pcap: str=None, **kwargs):
-        super().__init__(interface=iface, **kwargs)
+    def __init__(self, interval: int=DEFAULT_INTERVAL, pcap: str=None, **kwargs):
+        super().__init__(**kwargs)
         self.aux_thread_interval = interval
-        self.sniffer.set_buffer_size(LinkMetering.DEFAULT_BUFFER_SIZE)
+        self.sniffer.sniffer.set_buffer_size(LinkMetering.DEFAULT_BUFFER_SIZE)
         self.port_mapping = DictTools.invert(LinkMetering.MAP)
         self.services = LinkMetering.MAP.keys()
-        self.buffer_params = {'interface': self.sniff_iface, 'services': self.services, 'interval': self.aux_thread_interval, 'service_port_map': self.port_mapping}
+        self.buffer_params = {'interface': self.sniff_iface, 'services': self.services, 'interval': self.aux_thread_interval, 'service_port_map': self.port_mapping, 'session': self.session}
         self.buffer = None
         self.reset_buffer()
-        self.init_db(db_path)
+        self.init_db(self.db_path)
         self.persistence = LinkMeteringPersistence()
         self.pcap = pcap
 
     @staticmethod
-    def init_db(path, create_tables=True):
+    def init_db(path):
         LinkMetering.DATABASE.init(path)
         LinkMetering.DATABASE.connect()
-        if create_tables:
-            LinkMetering.DATABASE.create_tables([MeteringData])
+        LinkMetering.DATABASE.create_tables([MeteringData])
 
     def measure_packet(self, traffic_type, packet_bytes):
         packet = Ether(packet_bytes)
@@ -81,27 +80,36 @@ class LinkMetering(MonitoringModule):
         pcap = None
         if self.pcap is not None:
             pcap = PcapWriter(self.pcap)
-        while not self.stopped.is_set():
-            traffic_type, packet = self.pipe.recv()
+        while True:
+            try:
+                traffic_type, packet = self.conn.recv()
+            except EOFError:
+                break
+            # Producer finished sniffing
+            if packet is None:
+                break
             # Write to pcap file if provided path
             if pcap is not None:
                 pcap.write(packet)
             self.measure_packet(traffic_type, packet)
-        if pcap is not None:
-            pcap.flush()
-            pcap.close()
-        self.stop()
-        print("Metering analysis finished!")
+        self.module_cleanup(pcap)
+        print("Link Metering: Execution finished!")
 
     def start_monitoring(self):
-        print("Metering link usage, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)
+        print("Link Metering: Execution Started, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)
         self.start_sniffing()
         self.start()
 
+    def module_cleanup(self, pcap):
+        self.cleanup()
+        if pcap is not None:
+            pcap.flush()
+            pcap.close()
+
 
 class MeteringData(Model):
-    interface = CharField()
     type = CharField()
+    session = ForeignKeyField(MonitoringSession, backref='link_data')
     time = TimeField(formats='%H:%M:%S')
     ignored_count = IntegerField(default=0)
     etc_ports = JSONField(default={})
@@ -114,6 +122,7 @@ class MeteringData(Model):
     neutron = IntegerField(default=0, column_name='m_neutron')
     ceilometer = IntegerField(default=0, column_name='m_ceilometer')
     ceph = IntegerField(default=0, column_name='m_ceph')
+    total = IntegerField(default=0, column_name='m_total')
 
     class Meta:
         database = LinkMetering.DATABASE
@@ -154,6 +163,11 @@ class MeteringData(Model):
             self.port_calculation(port, service, usage)
         self._sort_etc_ports()
 
+    def calculate_total(self):
+        self.total = self['etc']
+        for service in self.services:
+            self.total += self[service]
+
     def port_calculation(self, port, service, usage):
         # uncategorized port
         if service == 'etc' and not self.is_ephemeral(port):
@@ -183,6 +197,7 @@ class MeteringData(Model):
 
     def save(self, force_insert=False, only=None):
         self.calculate_metering()
+        self.calculate_total()
         self._sort_etc_ports()
         super(MeteringData, self).save(force_insert, only)
 

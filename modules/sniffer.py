@@ -118,6 +118,7 @@ class IPSniff:
         self.ins.setsockopt(socket.SOL_SOCKET, SO_RCVBUFFORCE, self.socket_buffer)
         if self.on_packet is None:
             raise ReferenceError('Callback function missing!')
+        running = self.stop_cond.is_set()
 
         while True:
             pkt, sa_ll = self.ins.recvfrom(MTU)

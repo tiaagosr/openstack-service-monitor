@@ -11,9 +11,11 @@ class DataPlotting:
     PLOT_PIE = 1
     PLOT_LINE = 0
 
-    def __init__(self, db_path, services=list(LinkMetering.SERVICES)+['etc']):
-        LinkMetering.init_db(db_path, create_tables=False)
+    def __init__(self, db_path, services=list(LinkMetering.SERVICES)+['etc'], session_id=1):
+        MonitoringModule.init_db(db_path)
+        LinkMetering.init_db(db_path)
         self.services = services
+        self.session_id = session_id
 
     @staticmethod
     def plot_increase(pos, val):
@@ -32,11 +34,10 @@ class DataPlotting:
             plot_value['ports'] = {}
             data_func = self.process_etc_data
 
-        print(traffic_type)
         if traffic_type is not None:
-            query = MeteringData.select().where(MeteringData.type == traffic_type)
+            query = MeteringData.select().where((MeteringData.type == traffic_type) & MeteringData.session_id == self.session_id)
         else:
-            query = MeteringData.select()
+            query = MeteringData.select().where(MeteringData.session_id == self.session_id)
 
         for index, row in enumerate(query):
             # Every odd row sum its value to the even row before

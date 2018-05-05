@@ -1,7 +1,8 @@
 import socket
-from threading import Thread, Event
+from datetime import datetime
+from threading import Event
 import multiprocessing as mp
-from peewee import SqliteDatabase
+from peewee import SqliteDatabase, Model, CharField, TimeField
 from modules.sniffer import IPSniff
 from scapy.layers.inet import IP, TCP, Packet
 from scapy.layers.inet6 import IPv6
@@ -11,24 +12,36 @@ import time
 
 class PacketSniffer(mp.Process):
 
-    def __init__(self, iface, data_pipe):
+    def __init__(self, iface):
         super().__init__()
-        self.pipe = data_pipe
+        self.conn = None
         self.iface = iface
         self.sniffer = IPSniff(self.iface, callback=self.store_packet)
 
     def start_sniffing(self):
+        if self.conn is None:
+            raise ReferenceError("Communication pipe not initialized!")
         self.start()
+
+    def setup_connection(self):
+        recv_conn, send_conn = mp.Pipe(duplex=False)
+        self.conn = send_conn
+        return recv_conn
 
     def add_filter(self, socket_filter):
         self.sniffer.add_filter(socket_filter)
 
     def store_packet(self, direction, packet):
-        self.pipe.send((direction, packet))
+        self.conn.send((direction, packet))
 
     def run(self):
         self.sniffer.recv()
         print("Sniffer thread Stopped!")
+
+    def stop(self):
+        self.conn.send((None, None))
+        self.sniffer.ins.close()
+        self.conn.close()
 
 
 class MonitoringModule(mp.Process):
@@ -45,13 +58,14 @@ class MonitoringModule(mp.Process):
             return MonitoringModule.TRAFFIC_OUTBOUND
         return MonitoringModule.TRAFFIC_INBOUND
 
-    def __init__(self, interface='lo', mode=MODE_IPV4):
+    def __init__(self, interface='lo', mode=MODE_IPV4, db_path='monitoring.db', session=None):
         super().__init__()
         self.stopped = Event()
         self.sniff_iface = interface
-        recv_pipe, send_pipe = mp.Pipe(duplex=False)
-        self.pipe = recv_pipe
-        self.sniffer = PacketSniffer(interface, send_pipe)
+        self.sniffer = PacketSniffer(interface)
+        self.conn = self.sniffer.setup_connection()
+        self.db_path = db_path
+        self.session = session
 
         self.mode = mode
         if mode == MonitoringModule.MODE_IPV4:
@@ -59,6 +73,19 @@ class MonitoringModule(mp.Process):
         else:
             self.ip_layer = IPv6
         self.iface_ip = self.iface_ip(interface, mode)
+
+    @staticmethod
+    def init_db(db_path):
+        MonitoringModule.DATABASE.init(db_path)
+        MonitoringModule.DATABASE.connect()
+        MonitoringModule.DATABASE.create_tables([MonitoringSession])
+
+    @staticmethod
+    def create_session(interface, db_path):
+        MonitoringModule.init_db(db_path)
+        session = MonitoringSession.create(interface=interface)
+        session.save()
+        return session
 
     @staticmethod
     def execution_time() -> int:
@@ -73,14 +100,15 @@ class MonitoringModule(mp.Process):
     def start_sniffing(self):
         self.sniffer.start_sniffing()
 
-    def stop_sniffing(self):
-        self.sniffer.terminate()
-        self.pipe.close()
-        self.sniffer.join()
-
     def stop(self):
-        self.stop_sniffing()
-        self.stopped.set()
+        self.sniffer.stop()
+        self.sniffer.terminate()
+        self.sniffer.join()
+        print('Sniffer process stopped!')
+
+    def cleanup(self):
+        self.conn.close()
+
 
     @staticmethod
     def classify_packet(packet: Packet, port_map: dict) -> str:
@@ -108,3 +136,17 @@ class DictTools:
             for value in dictionary[key]:
                 new_dict[value] = key
         return new_dict
+
+
+class MonitoringSession(Model):
+    interface = CharField()
+    executed = TimeField(formats='%H:%M:%S', default=datetime.now)
+
+    class Meta:
+        database = MonitoringModule.DATABASE
+
+    def __init__(self, **kwargs):
+        super(MonitoringSession, self).__init__(**kwargs)
+
+
+
