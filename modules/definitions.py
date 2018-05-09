@@ -58,21 +58,22 @@ class MonitoringModule(mp.Process):
             return MonitoringModule.TRAFFIC_OUTBOUND
         return MonitoringModule.TRAFFIC_INBOUND
 
-    def __init__(self, interface='lo', mode=MODE_IPV4, db_path='monitoring.db', session=None):
+    def __init__(self, interface='lo', mode=MODE_IPV4, db_path='monitoring.db', session=None, file='net.pcap'):
         super().__init__()
+        self.file = file
         self.stopped = Event()
         self.sniff_iface = interface
-        self.sniffer = PacketSniffer(interface)
-        self.conn = self.sniffer.setup_connection()
+        # self.sniffer = PacketSniffer(interface)
+        # self.conn = self.sniffer.setup_connection()
         self.db_path = db_path
         self.session = session
 
-        self.mode = mode
-        if mode == MonitoringModule.MODE_IPV4:
-            self.ip_layer = IP
-        else:
-            self.ip_layer = IPv6
-        self.iface_ip = self.iface_ip(interface, mode)
+        #self.mode = mode
+        #if mode == MonitoringModule.MODE_IPV4:
+            #self.ip_layer = IP
+        #else:
+            #self.ip_layer = IPv6
+        #self.iface_ip = self.iface_ip(interface, mode)
 
     @staticmethod
     def init_db(db_path):

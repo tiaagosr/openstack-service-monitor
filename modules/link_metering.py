@@ -3,11 +3,19 @@ from modules.pcap import PcapWriter
 from peewee import *
 from playhouse.sqlite_ext import JSONField
 from scapy.layers.l2 import Ether
-from scapy.layers.inet import IP
+from scapy.layers.inet import IP, TCP
 from scapy.layers.inet6 import IPv6
 from modules.definitions import MonitoringModule, DictTools, MonitoringSession
 import json
+import dpkt
+import datetime
+import math
 
+
+def difference_secs(a, b):
+    if a is None or b is None:
+        return 0
+    return int(math.floor((b - a).total_seconds()))
 
 class LinkMetering(MonitoringModule):
     MAP = {
@@ -30,14 +38,13 @@ class LinkMetering(MonitoringModule):
     def __init__(self, interval: int=DEFAULT_INTERVAL, pcap: str=None, **kwargs):
         super().__init__(**kwargs)
         self.aux_thread_interval = interval
-        self.sniffer.sniffer.set_buffer_size(LinkMetering.DEFAULT_BUFFER_SIZE)
+        #self.sniffer.sniffer.set_buffer_size(LinkMetering.DEFAULT_BUFFER_SIZE)
         self.port_mapping = DictTools.invert(LinkMetering.MAP)
         self.services = LinkMetering.MAP.keys()
         self.buffer_params = {'interface': self.sniff_iface, 'services': self.services, 'interval': self.aux_thread_interval, 'service_port_map': self.port_mapping, 'session': self.session}
-        self.buffer = None
-        self.reset_buffer()
+        self.buffer = {}
+        self.metering_start_time = None
         self.init_db(self.db_path)
-        self.persistence = LinkMeteringPersistence()
         self.pcap = pcap
 
     @staticmethod
@@ -46,13 +53,10 @@ class LinkMetering(MonitoringModule):
         LinkMetering.DATABASE.connect()
         LinkMetering.DATABASE.create_tables([MeteringData])
 
-    def measure_packet(self, traffic_type, packet_bytes):
+    def measure_packet(self, packet_bytes, buffer):
         packet = Ether(packet_bytes)
-        traffic_type = self.packet_type(traffic_type)
 
         port = self.classify_packet(packet, self.port_mapping)
-
-        buffer = self.buffer[traffic_type]
 
         if IPv6 in packet:
             plen = packet.plen
@@ -65,35 +69,44 @@ class LinkMetering(MonitoringModule):
         if port is not None:
             buffer[port] += plen
         # Packet without TCP Layer (subsequently, without destination port)
-        elif traffic_type is not None:
+        elif packet.haslayer(TCP):
             buffer['etc'] += plen
 
-    def reset_buffer(self):
-        inbound_buffer = MeteringData(type=MonitoringModule.TRAFFIC_INBOUND, **self.buffer_params)
-        outbound_buffer = MeteringData(type=MonitoringModule.TRAFFIC_OUTBOUND, **self.buffer_params)
-        self.buffer = {MonitoringModule.TRAFFIC_INBOUND: inbound_buffer,
-                       MonitoringModule.TRAFFIC_OUTBOUND: outbound_buffer}
-        return self.buffer
+    def get_buffer(self, cur_time):
+        time = difference_secs(self.metering_start_time, cur_time)
+        if time not in self.buffer:
+            self.buffer[time] = MeteringData(**self.buffer_params, time=time)
+        return self.buffer[time]
 
     def run(self):
-        self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.stopped, self.reset_buffer)
-        pcap = None
-        if self.pcap is not None:
-            pcap = PcapWriter(self.pcap)
-        while True:
-            try:
-                traffic_type, packet = self.conn.recv()
-            except EOFError:
-                break
-            # Producer finished sniffing
-            if packet is None:
-                break
-            # Write to pcap file if provided path
-            if pcap is not None:
-                pcap.write(packet)
-            self.measure_packet(traffic_type, packet)
-        self.module_cleanup(pcap)
+        # self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.stopped, self.reset_buffer)
+        print("Starting dump analysis!")
+        max_time, min_time = None, None
+        for ts, _ in dpkt.pcap.Reader(open(self.pcap, 'rb')):
+            current_time = datetime.datetime.utcfromtimestamp(ts)
+            if max_time is None or current_time > max_time:
+                max_time = current_time
+            if min_time is None or current_time < min_time:
+                min_time = current_time
+        self.metering_start_time = min_time
+        self.metering_finish_time = max_time
+        print("Finished setting max and min time")
+
+        for time in range(0, difference_secs(max_time, min_time)):
+            self.get_buffer(time)
+
+        for ts, pkt in dpkt.pcap.Reader(open(self.pcap, 'rb')):
+            current_time = datetime.datetime.utcfromtimestamp(ts)
+            buffer = self.get_buffer(current_time)
+            self.measure_packet(pkt, buffer)
+
+        # self.module_cleanup(pcap)
+        for k, v in sorted(self.buffer.items()):
+            v.save()
         print("Link Metering: Execution finished!")
+
+    def start_analysis(self):
+        self.start()
 
     def start_monitoring(self):
         print("Link Metering: Execution Started, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)
@@ -108,7 +121,6 @@ class LinkMetering(MonitoringModule):
 
 
 class MeteringData(Model):
-    type = CharField()
     session = ForeignKeyField(MonitoringSession, backref='link_data')
     time = TimeField(formats='%H:%M:%S')
     ignored_count = IntegerField(default=0)
@@ -216,6 +228,11 @@ class LinkMeteringPersistence(Thread):
         self.interval = interval
         self.stopped = stop_event
         self.start()
+
+    @staticmethod
+    def store_metering(buffer, time):
+        buffer.time = time
+        buffer.save()
 
     def run(self):
         while not self.stopped.wait(self.interval):

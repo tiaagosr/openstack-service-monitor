@@ -42,7 +42,7 @@ plot = subparser.add_parser('plot',  help='Plot control network traffic data')
 category_map = {'categorized': True, 'uncategorized': False}
 plot_map = {'pie': DataPlotting.PLOT_PIE, 'line': DataPlotting.PLOT_LINE}
 direction_map = {'inbound': LinkMetering.TRAFFIC_INBOUND, 'outbound': LinkMetering.TRAFFIC_OUTBOUND, 'both': None}
-scenario.add_argument('-id', '--session-id', action='store', dest='session_id', help='Monitorated data session id', type=int, default=1)
+plot.add_argument('-id', '--session-id', action='store', dest='session_id', help='Monitorated data session id', type=int, default=1)
 plot.add_argument('-p', '--plot-type', action='store', dest='plot_type', help='Plot type', type=str, choices=['pie', 'line'], default='line')
 plot.add_argument('-t', '--data-type', action='store', dest='data_type', help='Plotted data type', type=str, choices=category_map, default='categorized')
 plot.add_argument('-s', '--services', dest='service_list', help='Services to be displayed in categorized plot', nargs='+', type=str, choices=services+['etc'], default=services+['etc'], metavar='\b')
@@ -53,13 +53,13 @@ class UseCase:
     @staticmethod
     def monitor_link(db_path=db_file, **kwargs):
         link_metering = LinkMetering(db_path=db_path, **kwargs)
-        link_metering.start_monitoring()
+        link_metering.start_analysis()
         return link_metering
 
     @staticmethod
-    def metering_plot(plot_type=DataPlotting.PLOT_PIE, categorized=True, traffic_type=None, services=None):
-        plot = DataPlotting(db_file, services=services)
-        plot.metering_plot(plot_type=plot_type, categorized=categorized, traffic_type=traffic_type)
+    def metering_plot(plot_type=DataPlotting.PLOT_PIE, categorized=True, services=None, session_id=1):
+        plot = DataPlotting(db_file, services=services, session_id=session_id)
+        plot.metering_plot(plot_type=plot_type, categorized=categorized)
 
     @staticmethod
     def log_api(db_path=db_file, **kwargs):
@@ -112,4 +112,4 @@ if __name__ == '__main__':
         categorized = category_map[args.data_type]
         traffic = direction_map[args.traffic_direction]
         type = plot_map[args.plot_type]
-        UseCase.metering_plot(plot_type=type, categorized=categorized, traffic_type=traffic, services=args.service_list, session_id=args.session_id)
+        UseCase.metering_plot(plot_type=type, categorized=categorized, services=args.service_list, session_id=args.session_id)

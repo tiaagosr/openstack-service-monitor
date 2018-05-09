@@ -25,7 +25,7 @@ class DataPlotting:
     def plot_append(pos, val):
         pos.append(val)
 
-    def metering_data(self, traffic_type=None, categorized=True):
+    def metering_data(self, categorized=True):
         plot_value = {'y': []}
         if categorized:
             plot_value['services'] = {x: [] for x in self.services}
@@ -34,22 +34,11 @@ class DataPlotting:
             plot_value['ports'] = {}
             data_func = self.process_etc_data
 
-        if traffic_type is not None:
-            query = MeteringData.select().where((MeteringData.type == traffic_type) & MeteringData.session_id == self.session_id)
-        else:
-            query = MeteringData.select().where(MeteringData.session_id == self.session_id)
+        query = MeteringData.select().where(MeteringData.session_id == self.session_id)
 
         for index, row in enumerate(query):
-            # Every odd row sum its value to the even row before
-            # Reason: each metering creates 2 rows, one for inbound traffic and one for outbound traffic
-            # The sum only happens if no traffic type was defined
-            if index % 2 != 0 and traffic_type is not None:
-                plot_row = self.plot_increase
-            # Every even row, starting from 0
-            else:
-                # plot_value['y'].append(datetime.strptime(row.time, self.date_format))
-                plot_value['y'].append(row.time)
-                plot_row = self.plot_append
+            plot_value['y'].append(row.time)
+            plot_row = self.plot_append
             data_func(index, row, plot_value, plot_row)
         return plot_value
 
@@ -89,8 +78,8 @@ class DataPlotting:
 
         return fig, ax
 
-    def metering_plot(self, plot_type=PLOT_LINE, categorized=True, traffic_type=None):
-        plot_data = self.metering_data(traffic_type=traffic_type, categorized=categorized)
+    def metering_plot(self, plot_type=PLOT_LINE, categorized=True):
+        plot_data = self.metering_data(categorized=categorized)
 
         if categorized:
             data = plot_data['services']
@@ -105,10 +94,6 @@ class DataPlotting:
             plotting_func = self.pie_setup
 
         title = 'Total Traffic'
-        if traffic_type == MonitoringModule.TRAFFIC_OUTBOUND:
-            title = 'Outbound Traffic'
-        elif traffic_type == MonitoringModule.TRAFFIC_INBOUND:
-            title = 'Inbound Traffic'
         _, ax = self.format_plot(title)
 
         plotting_func(plot_data, data, legends, ax)
