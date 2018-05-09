@@ -13,7 +13,7 @@ import subprocess as sub
 db_file = 'monitoring.db'
 
 services = list(LinkMetering.MAP.keys())
-scenario = None
+test_scenario = None
 
 parser = argparse.ArgumentParser(description='OpenStack Service Monitoring System')
 subparser = parser.add_subparsers(title='Modules', dest='module')
@@ -70,13 +70,13 @@ class UseCase:
 
     @staticmethod
     def init_scenario(**kwargs):
-        scenario = ScenarioManager(**kwargs)
-        scenario.authenticate()
-        scenario.network_cfg()
+        test_scenario = ScenarioManager(**kwargs)
+        test_scenario.authenticate()
+        test_scenario.network_cfg()
 
     @staticmethod
     def start_scenario(vm_count, state_list):
-        scenario.test_scenario(vm_count, state_list)
+        test_scenario.test_scenario(vm_count, state_list)
 
 
 if __name__ == '__main__':
