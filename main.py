@@ -13,7 +13,6 @@ import subprocess as sub
 db_file = 'monitoring.db'
 
 services = list(LinkMetering.MAP.keys())
-test_scenario = None
 
 parser = argparse.ArgumentParser(description='OpenStack Service Monitoring System')
 subparser = parser.add_subparsers(title='Modules', dest='module')
@@ -73,10 +72,11 @@ class UseCase:
         test_scenario = ScenarioManager(**kwargs)
         test_scenario.authenticate()
         test_scenario.network_cfg()
+        return test_scenario
 
     @staticmethod
-    def start_scenario(vm_count, state_list):
-        test_scenario.test_scenario(vm_count, state_list)
+    def start_scenario(scenario, vm_count, state_list):
+        scenario.test_scenario(vm_count, state_list)
 
 
 if __name__ == '__main__':
@@ -85,10 +85,11 @@ if __name__ == '__main__':
         monitor_bandwidth = None
         api_log = None
         tcpdump = None
+        test_scenario = None
         ip_mode = mode_map[args.ip_mode]
         session = MonitoringModule.create_session(args.iface, db_file)
         if args.use_scenario:
-            UseCase.init_scenario(image=args.vm_image, flavor=args.vm_flavor)
+            test_scenario = UseCase.init_scenario(image=args.vm_image, flavor=args.vm_flavor)
         #Monitoring Modules
         if 'tcpdump' in args.monitors:
             pcap_file = 'tcpdump_'+args.pcap if args.pcap != '' else 'tcpdump.pcap'
@@ -99,8 +100,8 @@ if __name__ == '__main__':
         if 'api' in args.monitors:
             api_log = UseCase.log_api(interface=args.iface, mode=ip_mode, session=session)
         #Scenario
-        if args.use_scenario:
-            UseCase.start_scenario(args.vm_count, args.state_list)
+        if test_scenario is not None:
+            UseCase.start_scenario(test_scenario, args.vm_count, args.state_list)
             if monitor_bandwidth is not None:
                 monitor_bandwidth.stop()
             if api_log is not None:
