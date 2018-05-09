@@ -92,7 +92,7 @@ if __name__ == '__main__':
             test_scenario = UseCase.init_scenario(image=args.vm_image, flavor=args.vm_flavor)
         #Monitoring Modules
         if 'tcpdump' in args.monitors:
-            pcap_file = 'tcpdump_'+args.pcap if args.pcap != '' else 'tcpdump.pcap'
+            pcap_file = args.pcap if args.pcap != '' else 'tcpdump.pcap'
             tcpdump = sub.Popen('exec tcpdump -w '+pcap_file+' -i '+args.iface, shell=True, stdout=sub.DEVNULL)
         if 'bandwidth' in args.monitors:
             pcap_file = args.pcap if args.pcap != '' else None
