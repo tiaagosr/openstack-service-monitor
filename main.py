@@ -69,11 +69,11 @@ class UseCase:
 
     @staticmethod
     def apply_scenario(vm_count, state_list, **kwargs):
-        scenario = ScenarioManager()
+        scenario = ScenarioManager(**kwargs)
         scenario.authenticate()
         scenario.network_cfg()
 
-        scenario.test_scenario(vm_count, state_list, **kwargs)
+        scenario.test_scenario(vm_count, state_list)
 
 
 if __name__ == '__main__':
@@ -87,7 +87,7 @@ if __name__ == '__main__':
         #Monitoring Modules
         if 'tcpdump' in args.monitors:
             pcap_file = 'tcpdump_'+args.pcap if args.pcap != '' else 'tcpdump.pcap'
-            tcpdump = sub.Popen('exec tcpdump -w '+pcap_file+' -i '+args.iface+' any', shell=True, stdout=sub.DEVNULL)
+            tcpdump = sub.Popen('exec tcpdump -w '+pcap_file+' -i '+args.iface, shell=True, stdout=sub.DEVNULL)
         if 'bandwidth' in args.monitors:
             pcap_file = args.pcap if args.pcap != '' else None
             monitor_bandwidth = UseCase.monitor_link(interface=args.iface, interval=args.interval, mode=ip_mode, pcap=pcap_file, session=session)
