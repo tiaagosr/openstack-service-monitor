@@ -10,7 +10,6 @@ def regex(packet, attr, value):
     print("is ", value, " in ", getattr(packet, attr, None).decode("utf-8"), " ?")
     return bool(re.search(value, getattr(packet, attr, None).decode("utf-8")))
 
-
 ACTIONS = dict()
 
 ACTIONS['nova'] = [
@@ -33,7 +32,7 @@ ACTIONS['nova'] = [
 
     {
         'requirement': [
-            ('Path', '/servers/[a-zA-Z0-9_-]+/?\Z', regex),
+            ('Path', '/servers/[a-zA-Z0-9_-]+(?:\.json)?/?\Z', regex),
         ],
         'actions': [
             {'action': 'Change VM Config', 'requirement': ('Method', 'PUT', equal)},
@@ -77,7 +76,7 @@ ACTIONS['nova'] = [
 
     {
         'requirement': [
-            ('Path', '/servers/[a-zA-Z0-9_-]+/os-interface/[a-zA-Z0-9_-]+/?\Z', regex),
+            ('Path', '/servers/[a-zA-Z0-9_-]+/os-interface/[a-zA-Z0-9_-]+(?:\.json)?/?\Z', regex),
         ],
         'actions': [
             {'action': 'Show Interface Details', 'requirement': ('Method', 'GET', equal)},

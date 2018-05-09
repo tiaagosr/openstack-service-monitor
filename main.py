@@ -6,9 +6,9 @@ import argparse
 from modules.api_logging import ApiLogging
 from modules.definitions import MonitoringModule
 from modules.link_metering import LinkMetering
-#from modules.api_logging import ApiLogging
 from modules.plotting import DataPlotting
 from modules.simple_scenario import ScenarioManager
+import subprocess as sub
 
 db_file = 'monitoring.db'
 
@@ -19,7 +19,7 @@ subparser = parser.add_subparsers(title='Modules', dest='module')
 
 monitor = subparser.add_parser('monitor', help='Execute monitoring modules')
 mode_map = {'IPv4': MonitoringModule.MODE_IPV4, 'IPv6': MonitoringModule.MODE_IPV6}
-monitor.add_argument('-m', '--modules', nargs='+', dest='monitors', help='Select modules to execute\nbandwidth: Monitor control network bandwidth usage\napi: Log api calls', type=str, choices=['bandwidth', 'api'], default=['bandwidth'])
+monitor.add_argument('-m', '--modules', nargs='+', dest='monitors', help='Select modules to execute\nbandwidth: Monitor control network bandwidth usage\napi: Log api calls', type=str, choices=['bandwidth', 'api', 'tcpdump'], default=['bandwidth'])
 monitor.add_argument('-i', '--interface', action='store', dest='iface', help='Interface monitored (Control Network) by monitoring modules', type=str, default='lo')
 monitor.add_argument('-im', '--ip_mode', action='store', dest='ip_mode', help='IP Mode: IPv4, IPv6', type=str, default='IPv4', choices=mode_map, metavar='IP_MODE')
 
@@ -81,9 +81,13 @@ if __name__ == '__main__':
     if args.module == 'monitor':
         monitor_bandwidth = None
         api_log = None
+        tcpdump = None
         ip_mode = mode_map[args.ip_mode]
         session = MonitoringModule.create_session(args.iface, db_file)
         #Monitoring Modules
+        if 'tcpdump' in args.monitors:
+            pcap_file = 'tcpdump_'+args.pcap if args.pcap != '' else 'tcpdump.pcap'
+            tcpdump = sub.Popen('exec tcpdump -w '+pcap_file+' -i '+args.iface+' any', shell=True, stdout=sub.DEVNULL)
         if 'bandwidth' in args.monitors:
             pcap_file = args.pcap if args.pcap != '' else None
             monitor_bandwidth = UseCase.monitor_link(interface=args.iface, interval=args.interval, mode=ip_mode, pcap=pcap_file, session=session)
@@ -98,6 +102,8 @@ if __name__ == '__main__':
                 monitor_bandwidth.stop()
             if api_log is not None:
                 api_log.stop()
+            if tcpdump is not None:
+                tcpdump.kill()
     elif args.module == 'plot':
         categorized = category_map[args.data_type]
         traffic = direction_map[args.traffic_direction]

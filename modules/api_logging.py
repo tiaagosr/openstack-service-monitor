@@ -53,7 +53,7 @@ class ApiLogging(MonitoringModule):
         'nova': {8774},
         'keystone': {5000, 35357},
         'swift': {8080},
-        'glance': {9292},
+        #'glance': {9292},
         'cinder': {8776},
         'neutron': {9696},
         #'ceph': {6789},
@@ -67,6 +67,7 @@ class ApiLogging(MonitoringModule):
         self.port_mapping = DictTools.invert(ApiLogging.MAP)
         super().__init__(**kwargs)
         self.sniffer.add_filter(bpf)
+        self.sniffer.sniffer.set_buffer_size(2**30)
         self.services = list(ApiLogging.MAP.keys())
         self._bind_ports_http()
         # self.create_filter_string(list(self.port_mapping.keys()))
