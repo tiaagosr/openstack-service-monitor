@@ -91,8 +91,6 @@ if __name__ == '__main__':
         if 'bandwidth' in args.monitors:
             pcap_file = args.pcap if args.pcap != '' else None
             monitor_bandwidth = UseCase.monitor_link(interface=args.iface, interval=args.interval, mode=ip_mode, pcap=pcap_file, session=session)
-            time.sleep(5)
-            monitor_bandwidth.stop()
         if 'api' in args.monitors:
             api_log = UseCase.log_api(interface=args.iface, mode=ip_mode, session=session)
         #Scenario
