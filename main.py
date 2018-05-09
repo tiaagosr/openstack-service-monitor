@@ -88,7 +88,7 @@ if __name__ == '__main__':
         ip_mode = mode_map[args.ip_mode]
         session = MonitoringModule.create_session(args.iface, db_file)
         if args.use_scenario:
-            UseCase.init_scenario(args.vm_count, args.state_list, image=args.vm_image, flavor=args.vm_flavor)
+            UseCase.init_scenario(image=args.vm_image, flavor=args.vm_flavor)
         #Monitoring Modules
         if 'tcpdump' in args.monitors:
             pcap_file = 'tcpdump_'+args.pcap if args.pcap != '' else 'tcpdump.pcap'
