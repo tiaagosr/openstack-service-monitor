@@ -146,7 +146,7 @@ ACTIONS['glance'] = [
     #Image
     {
         'requirement': [
-            ('Path', '/v2\.0/images/[a-zA-Z0-9_-]+/?\Z', regex),
+            ('Path', '(?:/v[0-9\.]+)?/images/[a-zA-Z0-9_-]+/?\Z', regex),
         ],
         'actions': [
             {'action': 'Update Image', 'requirement': ('Method', 'PATCH', equal)},
@@ -156,16 +156,38 @@ ACTIONS['glance'] = [
     {
         'action': 'Get image info',
         'requirement': [
-            ('Path', '/v2\.0/images(?:/?\Z|\.json(?:\?[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+(?:\&[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+)*)?\Z)', regex),
+            ('Path', '(?:/v[0-9\.]+)?/images(?:/?\Z|\.json(?:\?[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+(?:\&[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 
     {
+        'action': 'Download Image',
         'requirement': [
-            ('Path', '/v2\.0/images/?\Z', regex),
+            ('Path', '(?:/v[0-9\.]+)?/images/[a-zA-Z0-9_-]+/file/?\Z', regex),
+            ('Method', 'GET', equal),
+        ]},
+
+    {
+        'action': 'Upload Image',
+        'requirement': [
+            ('Path', '(?:/v[0-9\.]+)?/images/[a-zA-Z0-9_-]+/file/?\Z', regex),
+            ('Method', 'PUT', equal),
+        ]},
+
+    {
+        'requirement': [
+            ('Path', '(?:/v[0-9\.]+)?/images/?\Z', regex),
         ],
         'actions': [
             {'action': 'Create Image', 'requirement': ('Method', 'POST', equal)},
+        ]},
+
+    #Schemas
+    {
+        'action': 'Get image schema info',
+        'requirement': [
+            ('Path', '(?:/v[0-9\.]+)?/schemas/[a-zA-Z0-9_-]+/?\Z', regex),
+            ('Method', 'GET', equal),
         ]},
 ]
 
