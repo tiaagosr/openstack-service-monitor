@@ -206,7 +206,7 @@ ACTIONS['neutron'] = [
     #Port Actions
     {
         'requirement': [
-            ('Path', '/v2\.0/ports(?:\.json)?/[a-zA-Z0-9_-]+(?:\.json)?/?\Z)', regex),
+            ('Path', '/v2\.0/ports(?:\.json)?/[a-zA-Z0-9_-]+(?:\.json)?/?\Z', regex),
         ],
         'actions': [
             {'action': 'Update Port', 'requirement': ('Method', 'PUT', equal)},
