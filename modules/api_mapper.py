@@ -2,12 +2,12 @@ import re
 
 
 def equal(packet, attr, value):
-    print(getattr(packet, attr, None).decode("utf-8"), " == ", value, " ?")
+    #print(getattr(packet, attr, None).decode("utf-8"), " == ", value, " ?")
     return getattr(packet, attr, None).decode("utf-8") == value
 
 
 def regex(packet, attr, value):
-    print("is ", value, " in ", getattr(packet, attr, None).decode("utf-8"), " ?")
+    #print("is ", value, " in ", getattr(packet, attr, None).decode("utf-8"), " ?")
     return bool(re.search(value, getattr(packet, attr, None).decode("utf-8")))
 
 ACTIONS = dict()
@@ -42,7 +42,7 @@ ACTIONS['nova'] = [
     {
         'action': 'Get vm info',
         'requirement': [
-            ('Path', '/servers(?:/?\Z|\.json(?:\?[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+(?:\&[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+)*)?\Z)', regex),
+            ('Path', '/servers(?:/?\Z|(\.json|/detail)(?:\?[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+(?:\&[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 
@@ -106,7 +106,7 @@ ACTIONS['nova'] = [
     # Flavor
     {
         'requirement': [
-            ('Path', '/flavors/?\Z', regex),
+            ('Path', '(?:/v[0-9\.]+)?/flavors/?\Z', regex),
         ],
         'actions': [
             {'action': 'Create Flavor', 'requirement': ('Method', 'POST', equal)},
@@ -115,7 +115,14 @@ ACTIONS['nova'] = [
     {
         'action': 'Get flavor info',
         'requirement': [
-            ('Path', '/flavors(?:/?\Z|\.json(?:\?[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+(?:\&[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+)*)?\Z)', regex),
+            ('Path', '(?:/v[0-9\.]+)?/flavors/[a-zA-Z0-9_-]+/?\Z', regex),
+            ('Method', 'GET', equal),
+        ]},
+
+    {
+        'action': 'Get flavor info',
+        'requirement': [
+            ('Path', '(?:/v[0-9\.]+)?/flavors(?:/?\Z|\.json(?:\?[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+(?:\&[a-zA-Z0-9_\.\%-]+=[a-zA-Z0-9_\.\%-]+)*)?\Z)', regex),
             ('Method', 'GET', equal),
         ]},
 ]
@@ -199,7 +206,7 @@ ACTIONS['neutron'] = [
     #Port Actions
     {
         'requirement': [
-            ('Path', '/v2\.0/ports(?:\.json/[a-zA-Z0-9_-]+/?\Z)', regex),
+            ('Path', '/v2\.0/ports(?:\.json)?/[a-zA-Z0-9_-]+(?:\.json)?/?\Z)', regex),
         ],
         'actions': [
             {'action': 'Update Port', 'requirement': ('Method', 'PUT', equal)},
@@ -215,7 +222,7 @@ ACTIONS['neutron'] = [
 
     {
         'requirement': [
-            ('Path', '/v2\.0/port/?\Z', regex),
+            ('Path', '/v2\.0/ports(?:\.json)?\Z', regex),
             ('Method', 'POST', equal)
         ],
         'action': 'Create port'
@@ -262,6 +269,14 @@ ACTIONS['neutron'] = [
         ],
         'action': 'Create Subnet'
     },
+
+    #Extensions
+    {
+        'action': 'List extensions',
+        'requirement': [
+            ('Method', 'GET', equal),
+            ('Path', '/v2\.0/extensions(?:\.json)?/?\Z', regex)
+        ]},
 
     #L3 Floating IP
     {
@@ -431,6 +446,14 @@ ACTIONS['keystone'] = [
             ('Path', '/v3\Z', regex)
         ]},
 
+    #Healthcheck
+    {
+        'action': 'Healthcheck',
+        'requirement': [
+            ('Method', 'GET', equal),
+            ('Path', '/\Z', regex)
+        ]},
+
     # Authenticate
     {
         'requirement': [
@@ -561,9 +584,9 @@ def get_action(service, packet, api_map=ACTIONS):
 def verify_resource(packet, resource):
     reqs = resource['requirement']
     for req in reqs:
-        print("Verifying req: ", req)
+        #print("Verifying req: ", req)
         if not req[2](packet, req[0], req[1]):
-            print("req false, ignoring resource")
+            #print("req false, ignoring resource")
             return None
     if 'action' in resource:
         return resource['action']
