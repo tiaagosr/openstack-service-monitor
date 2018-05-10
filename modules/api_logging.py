@@ -4,6 +4,15 @@ from scapy.layers.l2 import Ether
 from scapy_http.http import *
 from modules.api_mapper import get_action
 from modules.definitions import MonitoringModule, DictTools, MonitoringSession
+import dpkt
+import math
+import datetime
+
+
+def difference_secs(a, b):
+    if a is None or b is None:
+        return 0
+    return int(math.floor((b - a).total_seconds()))
 
 # BPF Filter for the sniffing socket. It listens for tcp packets in which dport contains values from ApiLogging.MAP.values()
 DEFAULT_API_BPF = [
@@ -63,15 +72,14 @@ class ApiLogging(MonitoringModule):
 
     }
 
-    def __init__(self, bpf=DEFAULT_API_BPF, **kwargs):
+    def __init__(self, bpf=DEFAULT_API_BPF, pcap: str=None, **kwargs):
         self.port_mapping = DictTools.invert(ApiLogging.MAP)
         super().__init__(**kwargs)
-        self.sniffer.add_filter(bpf)
-        self.sniffer.sniffer.set_buffer_size(2**30)
         self.services = list(ApiLogging.MAP.keys())
         self._bind_ports_http()
         # self.create_filter_string(list(self.port_mapping.keys()))
         self.init_db(self.db_path)
+        self.pcap = pcap
 
     @staticmethod
     def create_filter_string(ports):
@@ -95,29 +103,32 @@ class ApiLogging(MonitoringModule):
             bind_layers(TCP, HTTP, sport=port)
             bind_layers(TCP, HTTP, dport=port)
 
-    def measure_packet(self, packet_bytes):
+    def measure_packet(self, packet_bytes, time):
         packet = Ether(packet_bytes)
         if not packet.haslayer(HTTP):
             return
-        port = packet.dport
+        port = self.classify_packet(packet, self.port_mapping)
+        if port is None:
+            return
 
-        new_entry = ApiData(services=self.services, service_port_map=self.port_mapping, interface=self.sniff_iface,
-                            time=self.execution_time(), session=self.session)
+        new_entry = ApiData(services=self.services, service_port_map=self.port_mapping, time=time, session=self.session)
         new_entry.set_service(port)
         new_entry.set_action(packet)
+        new_entry.set_method(packet)
         new_entry.save()
 
     def run(self):
-        while True:
-            try:
-                traffic_type, packet = self.conn.recv()
-            except EOFError:
-                break
-            # Producer finished sniffing
-            if packet is None:
-                break
-            self.measure_packet(packet)
-        self.cleanup()
+        max_time, min_time = None, None
+        for ts, _ in dpkt.pcap.Reader(open(self.pcap, 'rb')):
+            current_time = datetime.datetime.utcfromtimestamp(ts)
+            if max_time is None or current_time > max_time:
+                max_time = current_time
+            if min_time is None or current_time < min_time:
+                min_time = current_time
+
+        for ts, packet in dpkt.pcap.Reader(open(self.pcap, 'rb')):
+            current_time = datetime.datetime.utcfromtimestamp(ts)
+            self.measure_packet(packet, difference_secs(min_time, current_time))
         print("API Logging finished!")
 
     def start_monitoring(self):
@@ -132,6 +143,7 @@ class ApiData(Model):
     content = JSONField(default={})
     action = CharField()
     service = CharField()
+    method = CharField()
 
     class Meta:
         database = ApiLogging.DATABASE
@@ -145,6 +157,10 @@ class ApiData(Model):
         self.service = self.get_mapping(port)
         return self
 
+    def set_method(self, packet):
+        self.method = packet.Method
+        return self
+
     def get_mapping(self, port):
         if port in self.map:
             return self.map[port]
@@ -154,8 +170,7 @@ class ApiData(Model):
         self.action = get_action(self.service, packet)
 
     def content(self):
-        attrs = {'interface': self.interface, 'type': self.type, 'time': self.time, 'content': self.content,
-                 'service': self.service}
+        attrs = {'type': self.type, 'time': self.time, 'content': self.content, 'service': self.service}
         return attrs
 
     def __str__(self):
