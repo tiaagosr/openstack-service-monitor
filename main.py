@@ -64,7 +64,7 @@ class UseCase:
     @staticmethod
     def log_api(db_path=db_file, **kwargs):
         api_logging = ApiLogging(db_path=db_path, **kwargs)
-        api_logging.start_monitoring()
+        api_logging.start()
         return api_logging
 
     @staticmethod
