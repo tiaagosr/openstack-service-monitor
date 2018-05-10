@@ -149,7 +149,7 @@ ACTIONS['glance'] = [
             ('Path', '(?:/v[0-9\.]+)?/images/[a-zA-Z0-9_-]+/?\Z', regex),
         ],
         'actions': [
-            {'action': 'Update Image', 'requirement': ('Method', 'PATCH', equal)},
+            {'action': 'Update Image info', 'requirement': ('Method', 'PATCH', equal)},
             {'action': 'Delete Image', 'requirement': ('Method', 'DELETE', equal)},
             {'action': 'Get image Info', 'requirement': ('Method', 'GET', equal)},
         ]},
@@ -180,7 +180,7 @@ ACTIONS['glance'] = [
             ('Path', '(?:/v[0-9\.]+)?/images/?\Z', regex),
         ],
         'actions': [
-            {'action': 'Create Image', 'requirement': ('Method', 'POST', equal)},
+            {'action': 'Create Image info', 'requirement': ('Method', 'POST', equal)},
         ]},
 
     #Schemas
