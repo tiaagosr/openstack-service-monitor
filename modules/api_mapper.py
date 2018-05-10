@@ -151,6 +151,7 @@ ACTIONS['glance'] = [
         'actions': [
             {'action': 'Update Image', 'requirement': ('Method', 'PATCH', equal)},
             {'action': 'Delete Image', 'requirement': ('Method', 'DELETE', equal)},
+            {'action': 'Get image Info', 'requirement': ('Method', 'GET', equal)},
         ]},
 
     {
