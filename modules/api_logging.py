@@ -105,7 +105,7 @@ class ApiLogging(MonitoringModule):
 
     def measure_packet(self, packet_bytes, time):
         packet = Ether(packet_bytes)
-        if not packet.haslayer(HTTP):
+        if not packet.haslayer(HTTPRequest):
             return
         port = self.classify_packet(packet, self.port_mapping)
         if port is None:
