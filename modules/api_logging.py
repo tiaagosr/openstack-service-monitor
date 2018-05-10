@@ -62,7 +62,7 @@ class ApiLogging(MonitoringModule):
         'nova': {8774},
         'keystone': {5000, 35357},
         'swift': {8080},
-        #'glance': {9292},
+        'glance': {9292},
         'cinder': {8776},
         'neutron': {9696},
         #'ceph': {6789},
