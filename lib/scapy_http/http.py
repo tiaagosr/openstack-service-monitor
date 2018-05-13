@@ -239,7 +239,7 @@ class HTTP(Packet):
             something else '''
         try:
             prog = re.compile(
-                r"^(?:OPTIONS|GET|HEAD|POST|PUT|DELETE|TRACE|CONNECT) "
+                r"^(?:OPTIONS|GET|HEAD|POST|PUT|DELETE|TRACE|CONNECT|PATCH) "
                 r"(?:.+?) "
                 r"HTTP/\d\.\d$"
             )

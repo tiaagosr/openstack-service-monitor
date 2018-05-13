@@ -103,6 +103,7 @@ class ScenarioManager:
             'resume': {'condition': ['SUSPENDED'], 'function': (lambda x: x.resume())},
             'reboot': {'condition': ['ACTIVE', 'SHUTOFF', 'RESCUED'], 'function': (lambda x: x.reboot())},
             'shelve': {'condition': ['ACTIVE', 'SHUTOFF', 'SUSPENDED'], 'function': (lambda x: x.shelve())},
+            'shelve_offload': {'condition': ['ACTIVE', 'SHUTOFF', 'SUSPENDED', 'SHELVED'], 'function': (lambda x: x.shelve_offload())},
             'stop': {'condition': ['ACTIVE', 'SHUTOFF', 'RESCUED'], 'function': (lambda x: x.stop())}
         }
 
@@ -110,7 +111,7 @@ class ScenarioManager:
         if name in self.vms and state in state_dict and self.get_vm_status(name) in state_dict[state]['condition']:
             return state_dict[state]['function'](self.vms[name])
 
-    def test_scenario(self, vm_count=1, state_list=['stop'], sleep=90):
+    def test_scenario(self, vm_count=1, state_list=['suspend', 'resume', 'stop', 'shelve', 'shelve_offload'], sleep=90):
         vm_list = []
         for i in range(vm_count):
             vm_list.append(self.vm_create())
