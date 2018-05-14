@@ -1,23 +1,15 @@
-from threading import Thread
-from modules.pcap import PcapWriter
 from peewee import *
 from playhouse.sqlite_ext import JSONField
 from scapy.layers.l2 import Ether
 from scapy.layers.inet import IP, TCP
 from scapy.layers.inet6 import IPv6
-from modules.definitions import MonitoringModule, DictTools, MonitoringSession
+from modules.definitions import PcapAnalysisModule, DictTools, MonitoringSession
 import json
 import dpkt
 import datetime
-import math
 
 
-def difference_secs(a, b):
-    if a is None or b is None:
-        return 0
-    return int(math.floor((b - a).total_seconds()))
-
-class LinkMetering(MonitoringModule):
+class LinkMetering(PcapAnalysisModule):
     MAP = {
         'nova': set([5900, 6080, 6081, 6082, 8773, 8774, 8775] + list(range(5900, 5999))),
         'keystone': {5000, 35357},
@@ -31,21 +23,14 @@ class LinkMetering(MonitoringModule):
 
     SERVICES = MAP.keys()
 
-    DEFAULT_INTERVAL = 1
-
-    DEFAULT_BUFFER_SIZE = 2**30  # 1024MB
-
-    def __init__(self, interval: int=DEFAULT_INTERVAL, pcap: str=None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.aux_thread_interval = interval
-        #self.sniffer.sniffer.set_buffer_size(LinkMetering.DEFAULT_BUFFER_SIZE)
-        self.port_mapping = DictTools.invert(LinkMetering.MAP)
-        self.services = LinkMetering.MAP.keys()
-        self.buffer_params = {'interface': self.sniff_iface, 'services': self.services, 'interval': self.aux_thread_interval, 'service_port_map': self.port_mapping, 'session': self.session}
+        self.port_mapping = DictTools.invert(self.MAP)
+        self.services = self.MAP.keys()
+        self.buffer_params = {'services': self.services, 'service_port_map': self.port_mapping, 'session': self.session}
         self.buffer = {}
         self.metering_start_time = None
         self.init_db(self.db_path)
-        self.pcap = pcap
 
     @staticmethod
     def init_db(path):
@@ -63,6 +48,7 @@ class LinkMetering(MonitoringModule):
         elif IP in packet:
             plen = packet.len
         else:
+            packet.show()
             buffer.ignored_count += 1
             return
 
@@ -72,14 +58,13 @@ class LinkMetering(MonitoringModule):
         elif packet.haslayer(TCP):
             buffer['etc'] += plen
 
-    def get_buffer(self, cur_time):
-        time = difference_secs(self.metering_start_time, cur_time)
+    def get_buffer(self, time):
+        # time = self.difference_in_secs(self.metering_start_time, cur_time)
         if time not in self.buffer:
             self.buffer[time] = MeteringData(**self.buffer_params, time=time)
         return self.buffer[time]
 
     def run(self):
-        # self.persistence.timed_storage(self.buffer, self.aux_thread_interval, self.stopped, self.reset_buffer)
         print("Starting dump analysis!")
         max_time, min_time = None, None
         for ts, _ in dpkt.pcap.Reader(open(self.pcap, 'rb')):
@@ -89,35 +74,21 @@ class LinkMetering(MonitoringModule):
             if min_time is None or current_time < min_time:
                 min_time = current_time
         self.metering_start_time = min_time
-        self.metering_finish_time = max_time
-        print("Finished setting max and min time")
 
-        for time in range(0, difference_secs(max_time, min_time)):
+        for time in range(0, self.difference_in_secs(max_time, min_time)):
             self.get_buffer(time)
 
         for ts, pkt in dpkt.pcap.Reader(open(self.pcap, 'rb')):
-            current_time = datetime.datetime.utcfromtimestamp(ts)
+            current_time = self.difference_in_secs(datetime.datetime.utcfromtimestamp(ts), self.metering_start_time)
             buffer = self.get_buffer(current_time)
             self.measure_packet(pkt, buffer)
 
-        # self.module_cleanup(pcap)
         for k, v in sorted(self.buffer.items()):
             v.save()
         print("Link Metering: Execution finished!")
 
     def start_analysis(self):
         self.start()
-
-    def start_monitoring(self):
-        print("Link Metering: Execution Started, interval: " + str(self.aux_thread_interval)+"\niface ip: "+self.iface_ip)
-        self.start_sniffing()
-        self.start()
-
-    def module_cleanup(self, pcap):
-        self.cleanup()
-        if pcap is not None:
-            pcap.flush()
-            pcap.close()
 
 
 class MeteringData(Model):
@@ -139,11 +110,9 @@ class MeteringData(Model):
     class Meta:
         database = LinkMetering.DATABASE
 
-    def __init__(self, services=None, service_port_map=DictTools.invert(LinkMetering.MAP),
-                 interval=LinkMetering.DEFAULT_INTERVAL, **kwargs):
+    def __init__(self, services=None, service_port_map=DictTools.invert(LinkMetering.MAP), **kwargs):
         super(MeteringData, self).__init__(**kwargs)
         self.map = service_port_map
-        self.interval = interval
         self.services = services
         if services is not None:
             self.init_services(services)
@@ -170,9 +139,8 @@ class MeteringData(Model):
 
     def calculate_metering(self):
         for port in self.port_buffer:
-            usage = round(self[port] / self.interval)
             service = self.classify_port(port)
-            self.port_calculation(port, service, usage)
+            self.port_calculation(port, service, self[port])
         self._sort_etc_ports()
 
     def calculate_total(self):
@@ -201,7 +169,7 @@ class MeteringData(Model):
 
     def content(self):
         services = {x: getattr(self, x, 0) for x in self.services}
-        attrs = {'interface': self.interface, 'type': self.type, 'time': self.time, 'ignored_count': self.ignored_count, 'etc_ports': json.dumps(self.etc_ports), 'etc': self.etc}
+        attrs = {'time': self.time, 'ignored_count': self.ignored_count, 'etc_ports': json.dumps(self.etc_ports), 'etc': self.etc}
         return {**attrs, **services}
 
     def __str__(self):
@@ -212,36 +180,3 @@ class MeteringData(Model):
         self.calculate_total()
         self._sort_etc_ports()
         super(MeteringData, self).save(force_insert, only)
-
-
-class LinkMeteringPersistence(Thread):
-    def __init__(self):
-        super().__init__()
-        self.stopped = None
-        self.buffer = None
-        self.interval = None
-        self.buffer_reset = None
-
-    def timed_storage(self, buffer, interval, stop_event, buffer_reset):
-        self.buffer = buffer
-        self.buffer_reset = buffer_reset
-        self.interval = interval
-        self.stopped = stop_event
-        self.start()
-
-    @staticmethod
-    def store_metering(buffer, time):
-        buffer.time = time
-        buffer.save()
-
-    def run(self):
-        while not self.stopped.wait(self.interval):
-            exec_time = MonitoringModule.execution_time()
-
-            buffer = self.buffer
-            self.buffer = self.buffer_reset()
-
-            for item in buffer:
-                buffer[item].time = exec_time
-                buffer[item].save()
-            buffer.clear()

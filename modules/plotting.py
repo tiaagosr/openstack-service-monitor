@@ -1,18 +1,16 @@
 import matplotlib.pyplot as plt
 from cycler import cycler
 from functools import reduce
-from modules.definitions import MonitoringModule
+from modules.definitions import PcapAnalysisModule
 from modules.link_metering import LinkMetering, MeteringData
 
 
 class DataPlotting:
-    TRAFFIC_OUTBOUND = MonitoringModule.TRAFFIC_OUTBOUND
-    TRAFFIC_INBOUND = MonitoringModule.TRAFFIC_INBOUND
     PLOT_PIE = 1
     PLOT_LINE = 0
 
     def __init__(self, db_path, services=list(LinkMetering.SERVICES)+['etc'], session_id=1):
-        MonitoringModule.init_db(db_path)
+        PcapAnalysisModule.init_db(db_path)
         LinkMetering.init_db(db_path)
         self.services = services
         self.session_id = session_id

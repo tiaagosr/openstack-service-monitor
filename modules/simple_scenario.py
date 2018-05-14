@@ -6,7 +6,7 @@ from neutronclient.v2_0 import client as neutronclient
 from novaclient import client as novaclient
 import time
 
-from modules.definitions import MonitoringModule
+from modules.definitions import PcapAnalysisModule
 
 
 class ScenarioManager:
@@ -118,7 +118,7 @@ class ScenarioManager:
         print('VMs Created!')
         for state in state_list:
             time.sleep(sleep)
-            print('Changing vms state to '+state+', time: ', MonitoringModule.execution_time())
+            print('Changing vms state to '+state+', time: ', PcapAnalysisModule.execution_time())
             for vm in vm_list:
                 self.vm_set_state(vm, state)
         time.sleep(sleep)
