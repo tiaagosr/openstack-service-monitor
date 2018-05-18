@@ -36,7 +36,7 @@ api_log.add_argument('-ap', '--api-pcap', action='store', dest='pcap_a', help='A
 scenario = monitor.add_argument_group('Scenario')
 scenario.add_argument('-sc', '--execute-scenario', action='store_true', dest='use_scenario', help='Execute simple use scenario during monitoring')
 scenario.add_argument('-vm', '--vm-count', action='store', dest='vm_count', help='Number of VMs instance created through the scenario execution', type=int, default=1)
-scenario.add_argument('-sl', '--state-list', action='store', dest='state_list', help='Ordered state list which VM instances will cycle through the scenarion execution', nargs="+", choices=['suspend', 'resume', 'reboot', 'shelve', 'stop', 'shelve_offload'], default=['suspend', 'resume', 'stop', 'shelve', 'shelve_offload'], metavar='\b')
+scenario.add_argument('-sl', '--state-list', action='store', dest='state_list', help='Ordered state list which VM instances will cycle through the scenarion execution', nargs="+", choices=['suspend', 'resume', 'reboot', 'shelve', 'stop'], default=['suspend', 'resume', 'stop', 'shelve'], metavar='\b')
 monitor.add_argument('-vf', '--vm-flavor', action='store', dest='vm_flavor', help='Flavor which the Vms instance will use', type=str, default='m1.small')
 monitor.add_argument('-vi', '--vm-image', action='store', dest='vm_image', help='Image which the Vms instance will use', type=str, default='trusty-server')
 

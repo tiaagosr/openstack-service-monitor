@@ -103,7 +103,6 @@ class ScenarioManager:
             'resume': {'condition': ['SUSPENDED'], 'function': (lambda x: x.resume())},
             'reboot': {'condition': ['ACTIVE', 'SHUTOFF', 'RESCUED'], 'function': (lambda x: x.reboot())},
             'shelve': {'condition': ['ACTIVE', 'SHUTOFF', 'SUSPENDED'], 'function': (lambda x: x.shelve())},
-            'shelve_offload': {'condition': ['ACTIVE', 'SHUTOFF', 'SUSPENDED', 'SHELVED'], 'function': (lambda x: x.shelve_offload())},
             'stop': {'condition': ['ACTIVE', 'SHUTOFF', 'RESCUED'], 'function': (lambda x: x.stop())}
         }
 
@@ -111,16 +110,22 @@ class ScenarioManager:
         if name in self.vms and state in state_dict and self.get_vm_status(name) in state_dict[state]['condition']:
             return state_dict[state]['function'](self.vms[name])
 
-    def test_scenario(self, vm_count=1, state_list=['suspend', 'resume', 'stop', 'shelve', 'shelve_offload'], sleep=90):
+    def test_scenario(self, vm_count=1, state_list=['suspend', 'resume', 'stop', 'shelve'], sleep=90):
+        targeted_time = 5;
         vm_list = []
         for i in range(vm_count):
             vm_list.append(self.vm_create())
         print('VMs Created!')
         for state in state_list:
-            time.sleep(sleep)
+            targeted_time += sleep
+            while PcapAnalysisModule.execution_time() < targeted_time:
+                time.sleep(0.1)
             print('Changing vms state to '+state+', time: ', PcapAnalysisModule.execution_time())
             for vm in vm_list:
                 self.vm_set_state(vm, state)
-        time.sleep(sleep)
+        targeted_time += sleep
+        while PcapAnalysisModule.execution_time() < targeted_time:
+            time.sleep(0.1)
         print('Scenario Finished!')
+
 
