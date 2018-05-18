@@ -1,5 +1,6 @@
 import imports
 import argparse
+import time
 
 from modules.api_logging import ApiLogging
 from modules.definitions import PcapAnalysisModule
@@ -75,6 +76,10 @@ class UseCase:
 
     @staticmethod
     def start_scenario(scenario, vm_count, state_list):
+        #Start scenario when t=5
+        while PcapAnalysisModule.execution_time() < 5:
+            time.sleep(0.1)
+
         scenario.test_scenario(vm_count, state_list)
 
 
