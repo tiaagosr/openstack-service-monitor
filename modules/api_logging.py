@@ -16,7 +16,6 @@ class ApiLogging(PcapAnalysisModule):
         'glance': {9292},
         'cinder': {8776},
         'neutron': {9696},
-        #'ceph': {6789},
     }
 
     def __init__(self, **kwargs):
@@ -48,7 +47,7 @@ class ApiLogging(PcapAnalysisModule):
         new_entry = ApiData(services=self.services, service_port_map=self.port_mapping, time=time, session=self.session)
         new_entry.set_service(port)
         new_entry.set_action(packet)
-        new_entry.set_method(packet)
+        new_entry.set_request_data(packet)
         new_entry.save()
 
     def run(self):
@@ -69,10 +68,11 @@ class ApiLogging(PcapAnalysisModule):
 class ApiData(Model):
     session = ForeignKeyField(MonitoringSession, backref='api_log')
     time = TimeField(formats='%H:%M:%S')
-    content = JSONField(default={})
     action = CharField()
     service = CharField()
     method = CharField()
+    url = CharField()
+    content = JSONField(default={})
 
     class Meta:
         database = ApiLogging.DATABASE
@@ -86,8 +86,9 @@ class ApiData(Model):
         self.service = self.get_mapping(port)
         return self
 
-    def set_method(self, packet):
+    def set_request_data(self, packet):
         self.method = packet.Method
+        self.content = packet.load
         return self
 
     def get_mapping(self, port):
