@@ -93,7 +93,7 @@ if __name__ == '__main__':
             test_scenario = UseCase.init_scenario(image=args.vm_image, flavor=args.vm_flavor)
         pcap_path = args.pcap+'.pcap'
         pcap_path_all = args.pcap+'_all.pcap'
-        tcpdump_all = sub.Popen('exec tcpdump -w '+pcap_path_all+' -i any', shell=True, stdout=sub.DEVNULL)
+        #tcpdump_all = sub.Popen('exec tcpdump -w '+pcap_path_all+' -i any', shell=True, stdout=sub.DEVNULL)
         tcpdump = sub.Popen('exec tcpdump -w '+pcap_path+' -i '+args.iface, shell=True, stdout=sub.DEVNULL)
         #Scenario
         if test_scenario is not None:
