@@ -594,7 +594,6 @@ ACTIONS['keystone'] = [
 
 def get_action(service, packet, api_map=ACTIONS):
     api = api_map[service]
-    packet.show()
     for resource in api:
         action = verify_resource(packet, resource)
         if action is not None:

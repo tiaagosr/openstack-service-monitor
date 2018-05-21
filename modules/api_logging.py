@@ -88,7 +88,9 @@ class ApiData(Model):
 
     def set_request_data(self, packet):
         self.method = packet.Method
-        self.content = packet.load
+        self.url = packet.Path
+        if 'load' in packet:
+            self.content = packet.load
         return self
 
     def get_mapping(self, port):

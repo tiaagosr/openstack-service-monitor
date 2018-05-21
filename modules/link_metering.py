@@ -48,7 +48,6 @@ class LinkMetering(PcapAnalysisModule):
         elif IP in packet:
             plen = packet.len
         else:
-            packet.show()
             buffer.ignored_count += 1
             return
 
