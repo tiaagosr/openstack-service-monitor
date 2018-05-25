@@ -37,8 +37,8 @@ scenario = monitor.add_argument_group('Scenario')
 scenario.add_argument('-sc', '--execute-scenario', action='store_true', dest='use_scenario', help='Execute simple use scenario during monitoring')
 scenario.add_argument('-vm', '--vm-count', action='store', dest='vm_count', help='Number of VMs instance created through the scenario execution', type=int, default=1)
 scenario.add_argument('-sl', '--state-list', action='store', dest='state_list', help='Ordered state list which VM instances will cycle through the scenarion execution', nargs="+", choices=['suspend', 'resume', 'reboot', 'shelve', 'stop'], default=['suspend', 'resume', 'stop', 'shelve'], metavar='\b')
-monitor.add_argument('-vf', '--vm-flavor', action='store', dest='vm_flavor', help='Flavor which the Vms instance will use', type=str, default='m1.small')
-monitor.add_argument('-vi', '--vm-image', action='store', dest='vm_image', help='Image which the Vms instance will use', type=str, default='trusty-server')
+scenario.add_argument('-vf', '--vm-flavor', action='store', dest='vm_flavor', help='Flavor which the Vms instance will use', type=str, default='m1.small')
+scenario.add_argument('-vi', '--vm-image', action='store', dest='vm_image', help='Image which the Vms instance will use', type=str, default='trusty-server')
 
 
 plot = subparser.add_parser('plot',  help='Plot control network traffic data')
@@ -89,19 +89,18 @@ if __name__ == '__main__':
         tcpdump = None
         tcpdump_all = None
         test_scenario = None
+        pcap_path = args.pcap+'.pcap'
+        tcpdump = sub.Popen('exec tcpdump -w '+pcap_path+' -i '+args.iface, shell=True, stdout=sub.DEVNULL)
         if args.use_scenario:
             test_scenario = UseCase.init_scenario(image=args.vm_image, flavor=args.vm_flavor)
-        pcap_path = args.pcap+'.pcap'
-        pcap_path_all = args.pcap+'_all.pcap'
-        #tcpdump_all = sub.Popen('exec tcpdump -w '+pcap_path_all+' -i any', shell=True, stdout=sub.DEVNULL)
-        tcpdump = sub.Popen('exec tcpdump -w '+pcap_path+' -i '+args.iface, shell=True, stdout=sub.DEVNULL)
         #Scenario
         if test_scenario is not None:
             UseCase.start_scenario(test_scenario, args.vm_count, args.state_list)
-            if tcpdump is not None:
-                tcpdump.kill()
-            if tcpdump_all is not None:
-                tcpdump_all.kill()
+            print('Finished scenario at time: ', PcapAnalysisModule.execution_time())
+        if tcpdump is not None:
+            tcpdump.terminate()
+            tcpdump.wait()
+            print('Finished monitoring at time: ', PcapAnalysisModule.execution_time())
 
     if args.module == 'analysis':
         session = PcapAnalysisModule.create_session(args.iface, db_file)

@@ -19,5 +19,4 @@ do
 	openstack server delete vm1
 	openstack network delete local
 	openstack image delete $img_name
-	python3 main.py analysis -m bandwidth api -p "resultados/exec_$i.pcap" -i $iface
 done

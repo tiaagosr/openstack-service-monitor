@@ -1,3 +1,4 @@
+import logging
 from os import environ as env
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
@@ -12,6 +13,7 @@ from modules.definitions import PcapAnalysisModule
 class ScenarioManager:
 
     def __init__(self, flavor="m1.small", image="trusty-server", auth_data=None):
+        logging.basicConfig(filename='scenario.log', level=logging.DEBUG)
         self.flavor = flavor
         self.image = image
         self.nics = None
@@ -111,21 +113,27 @@ class ScenarioManager:
             return state_dict[state]['function'](self.vms[name])
 
     def test_scenario(self, vm_count=1, state_list=['suspend', 'resume', 'stop', 'shelve'], sleep=90):
-        targeted_time = 5;
+        current_time = PcapAnalysisModule.execution_time
+        logging.info('Time %s: Started scenario', str(current_time()))
+        targeted_time = 5
         vm_list = []
         for i in range(vm_count):
             vm_list.append(self.vm_create())
-        print('VMs Created!')
+        logging.info('Time %s: finished creating vms', str(current_time()))
         for state in state_list:
             targeted_time += sleep
-            while PcapAnalysisModule.execution_time() < targeted_time:
+            logging.debug('Time %s: sleep, targeted time: %s', str(current_time()), str(targeted_time))
+            while current_time() < targeted_time:
                 time.sleep(0.1)
-            print('Changing vms state to '+state+', time: ', PcapAnalysisModule.execution_time())
+            print('Changing vms state to '+state+', time: ', current_time())
+            logging.info('Time %s: changing vms state to %s', str(current_time()), state)
             for vm in vm_list:
                 self.vm_set_state(vm, state)
         targeted_time += sleep
-        while PcapAnalysisModule.execution_time() < targeted_time:
+        while current_time() < targeted_time:
             time.sleep(0.1)
+        logging.info('Time %s: Scenario finished, having targeted time: ', str(current_time()), targeted_time)
         print('Scenario Finished!')
+        self.session.invalidate()
 
 
