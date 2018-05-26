@@ -132,7 +132,7 @@ class ScenarioManager:
         targeted_time += sleep
         while current_time() < targeted_time:
             time.sleep(0.1)
-        logging.info('Time %s: Scenario finished, having targeted time: ', str(current_time()), targeted_time)
+        logging.info('Time %s: Scenario finished, having targeted time: ', str(current_time()), str(targeted_time))
         print('Scenario Finished!')
         self.session.invalidate()
 
