@@ -108,8 +108,9 @@ class ScenarioManager:
             'stop': {'condition': ['ACTIVE', 'SHUTOFF', 'RESCUED'], 'function': (lambda x: x.stop())}
         }
 
-        print(name+" state: "+self.get_vm_status(name))
-        if name in self.vms and state in state_dict and self.get_vm_status(name) in state_dict[state]['condition']:
+        # print(name+" state: "+self.get_vm_status(name))
+        # if name in self.vms and state in state_dict and self.get_vm_status(name) in state_dict[state]['condition']:
+        if name in self.vms and state in state_dict:
             return state_dict[state]['function'](self.vms[name])
 
     def test_scenario(self, vm_count=1, state_list=['suspend', 'resume', 'stop', 'shelve'], sleep=120):
