@@ -93,6 +93,11 @@ if __name__ == '__main__':
         tcpdump = sub.Popen('exec tcpdump -w '+pcap_path+' -i '+args.iface, shell=True, stdout=sub.DEVNULL)
         if args.use_scenario:
             test_scenario = UseCase.init_scenario(image=args.vm_image, flavor=args.vm_flavor)
+        else:
+            current_time = PcapAnalysisModule.execution_time
+            targeted_time = 610
+            while current_time() < targeted_time:
+                time.sleep(0.1)
         #Scenario
         if test_scenario is not None:
             UseCase.start_scenario(test_scenario, args.vm_count, args.state_list)
