@@ -18,7 +18,7 @@ subparser = parser.add_subparsers(title='Modules', dest='module')
 
 monitor = subparser.add_parser('monitor', help='Create data dump with tcpdump')
 monitor.add_argument('-i', '--interface', action='store', dest='iface', help='Interface monitored (Control Network) by monitoring modules', type=str, default='lo')
-monitor.add_argument('-o', '--output', action='store', dest='pcap', help='output capture file name', type=str, default='monitored')
+monitor.add_argument('-o', '--output', action='store', dest='pcap', help='output capture file name', type=str, default=None)
 
 
 analysis = subparser.add_parser('analysis', help='Execute pcap analysis modules')
@@ -89,8 +89,9 @@ if __name__ == '__main__':
         tcpdump = None
         tcpdump_all = None
         test_scenario = None
-        pcap_path = args.pcap+'.pcap'
-        tcpdump = sub.Popen('exec tcpdump -w '+pcap_path+' -i '+args.iface, shell=True, stdout=sub.DEVNULL)
+        if args.pcap is not None:
+            pcap_path = args.pcap+'.pcap'
+            tcpdump = sub.Popen('exec tcpdump -w '+pcap_path+' -i '+args.iface, shell=True, stdout=sub.DEVNULL)
         if args.use_scenario:
             test_scenario = UseCase.init_scenario(image=args.vm_image, flavor=args.vm_flavor)
         else:
