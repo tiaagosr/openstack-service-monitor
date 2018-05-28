@@ -114,6 +114,7 @@ class ScenarioManager:
             return state_dict[state]['function'](self.vms[name])
 
     def test_scenario(self, vm_count=1, state_list=['suspend', 'resume', 'stop', 'shelve'], sleep=120):
+        print("Iniciando cenario")
         current_time = PcapAnalysisModule.execution_time
         logging.info('Time %s: Started scenario', str(current_time()))
         targeted_time = 10
