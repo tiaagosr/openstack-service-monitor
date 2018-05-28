@@ -29,7 +29,6 @@ class LinkMetering(PcapAnalysisModule):
         self.services = self.MAP.keys()
         self.buffer_params = {'services': self.services, 'service_port_map': self.port_mapping, 'session': self.session}
         self.buffer = {}
-        self.metering_start_time = None
         self.init_db(self.db_path)
 
     @staticmethod
@@ -58,13 +57,31 @@ class LinkMetering(PcapAnalysisModule):
             buffer['etc'] += plen
 
     def get_buffer(self, time):
-        # time = self.difference_in_secs(self.metering_start_time, cur_time)
         if time not in self.buffer:
             self.buffer[time] = MeteringData(**self.buffer_params, time=time)
         return self.buffer[time]
 
     def run(self):
-        print("Starting dump analysis!")
+        print("Starting dump analysis at "+self.pcap+"!")
+
+        # Loopback traffic
+        if self.pcap_lo is not None:
+            max_time, min_time = None, None
+            for ts, _ in dpkt.pcap.Reader(open(self.pcap_lo, 'rb')):
+                current_time = datetime.datetime.utcfromtimestamp(ts)
+                if max_time is None or current_time > max_time:
+                    max_time = current_time
+                if min_time is None or current_time < min_time:
+                    min_time = current_time
+
+            for time in range(0, self.difference_in_secs(max_time, min_time)):
+                self.get_buffer(time)
+
+            for ts, pkt in dpkt.pcap.Reader(open(self.pcap_lo, 'rb')):
+                current_time = self.difference_in_secs(datetime.datetime.utcfromtimestamp(ts), min_time)
+                buffer = self.get_buffer(current_time)
+                self.measure_packet(pkt, buffer)
+
         max_time, min_time = None, None
         for ts, _ in dpkt.pcap.Reader(open(self.pcap, 'rb')):
             current_time = datetime.datetime.utcfromtimestamp(ts)
@@ -72,13 +89,12 @@ class LinkMetering(PcapAnalysisModule):
                 max_time = current_time
             if min_time is None or current_time < min_time:
                 min_time = current_time
-        self.metering_start_time = min_time
 
         for time in range(0, self.difference_in_secs(max_time, min_time)):
             self.get_buffer(time)
 
         for ts, pkt in dpkt.pcap.Reader(open(self.pcap, 'rb')):
-            current_time = self.difference_in_secs(datetime.datetime.utcfromtimestamp(ts), self.metering_start_time)
+            current_time = self.difference_in_secs(datetime.datetime.utcfromtimestamp(ts), min_time)
             buffer = self.get_buffer(current_time)
             self.measure_packet(pkt, buffer)
 

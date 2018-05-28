@@ -19,12 +19,15 @@ subparser = parser.add_subparsers(title='Modules', dest='module')
 monitor = subparser.add_parser('monitor', help='Create data dump with tcpdump')
 monitor.add_argument('-i', '--interface', action='store', dest='iface', help='Interface monitored (Control Network) by monitoring modules', type=str, default='lo')
 monitor.add_argument('-o', '--output', action='store', dest='pcap', help='output capture file name', type=str, default=None)
+monitor.add_argument('-lo', '--loopback', action='store_true', dest='loopback', help='Create an extra capture file for the loopback interface (lo)')
 
 
 analysis = subparser.add_parser('analysis', help='Execute pcap analysis modules')
 analysis.add_argument('-i', '--interface', action='store', dest='iface', help='Interface whose data is stored in the pcap src file', type=str, default='lo')
 analysis.add_argument('-m', '--modules', nargs='+', dest='monitors', help='Select modules to execute\nbandwidth: Analyze control network bandwidth usage\napi: Log api calls', type=str, choices=['bandwidth', 'api'], default=['bandwidth'])
 analysis.add_argument('-p', '--pcap', action='store', dest='pcap', help='Pcap src file used by all analysis modules', type=str, default='monitored.pcap')
+monitor.add_argument('-la', '--loopback-analysis', action='store', dest='pcap_lo', help='Analyse the loopback interface (lo) traffic as well', type=str, default=None)
+
 
 bandwidth = analysis.add_argument_group('Bandwidth')
 bandwidth.add_argument('-bp', '--bandwidth-pcap', action='store', dest='pcap_b', help='Bandwidth analysis pcap src file', type=str, default='')
@@ -87,9 +90,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.module == 'monitor':
         tcpdump = None
-        tcpdump_all = None
+        tcpdump_lo = None
         test_scenario = None
+        #tcpdump and loopback tcpdump
         if args.pcap is not None:
+            if args.loopback:
+                pcap_path_lo = args.pcap+'_lo.pcap'
+                tcpdump_lo = sub.Popen('exec tcpdump -w '+pcap_path_lo+' -i lo', shell=True, stdout=sub.DEVNULL)
             pcap_path = args.pcap+'.pcap'
             tcpdump = sub.Popen('exec tcpdump -w '+pcap_path+' -i '+args.iface, shell=True, stdout=sub.DEVNULL)
         if args.use_scenario:
@@ -103,9 +110,13 @@ if __name__ == '__main__':
         if test_scenario is not None:
             UseCase.start_scenario(test_scenario, args.vm_count, args.state_list)
             print('Finished scenario at time: ', PcapAnalysisModule.execution_time())
+        #tcpdump and loopback tcpdump
         if tcpdump is not None:
             tcpdump.terminate()
             tcpdump.wait()
+            if tcpdump_lo is not None:
+                tcpdump_lo.terminate()
+                tcpdump_lo.wait()
             print('Finished monitoring at time: ', PcapAnalysisModule.execution_time())
 
     if args.module == 'analysis':
@@ -115,10 +126,10 @@ if __name__ == '__main__':
         #Analysis Modules
         if 'bandwidth' in args.monitors:
             pcap_path = args.pcap_b if args.pcap_b != '' else args.pcap
-            monitor_bandwidth = UseCase.analyze_link(pcap=pcap_path, session=session)
+            monitor_bandwidth = UseCase.analyze_link(pcap=pcap_path, session=session, pcap_lo=args.pcap_lo)
         if 'api' in args.monitors:
             pcap_path = args.pcap_a if args.pcap_a != '' else args.pcap
-            api_log = UseCase.log_api(pcap=pcap_path, session=session)
+            api_log = UseCase.log_api(pcap=pcap_path, session=session, pcap_lo=args.pcap_lo)
         if monitor_bandwidth is not None:
             monitor_bandwidth.join()
         if api_log is not None:

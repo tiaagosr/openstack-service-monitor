@@ -10,9 +10,10 @@ class PcapAnalysisModule(mp.Process):
     START_TIME = time.time()
     DATABASE = SqliteDatabase(None)
 
-    def __init__(self, db_path='monitoring.db', session=None, pcap: str=None):
+    def __init__(self, db_path='monitoring.db', session=None, pcap: str=None, pcap_lo: str=None):
         super().__init__()
         self.pcap = pcap
+        self.pcap_lo = pcap_lo
         self.db_path = db_path
         self.session = session
 

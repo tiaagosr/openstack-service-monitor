@@ -62,6 +62,19 @@ class ApiLogging(PcapAnalysisModule):
         for ts, packet in dpkt.pcap.Reader(open(self.pcap, 'rb')):
             current_time = datetime.datetime.utcfromtimestamp(ts)
             self.measure_packet(packet, self.difference_in_secs(min_time, current_time))
+
+        if self.pcap_lo is not None:
+            max_time, min_time = None, None
+            for ts, _ in dpkt.pcap.Reader(open(self.pcap_lo, 'rb')):
+                current_time = datetime.datetime.utcfromtimestamp(ts)
+                if max_time is None or current_time > max_time:
+                    max_time = current_time
+                if min_time is None or current_time < min_time:
+                    min_time = current_time
+
+            for ts, packet in dpkt.pcap.Reader(open(self.pcap_lo, 'rb')):
+                current_time = datetime.datetime.utcfromtimestamp(ts)
+                self.measure_packet(packet, self.difference_in_secs(min_time, current_time))
         print("API analysis finished!")
 
 
