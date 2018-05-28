@@ -26,7 +26,7 @@ analysis = subparser.add_parser('analysis', help='Execute pcap analysis modules'
 analysis.add_argument('-i', '--interface', action='store', dest='iface', help='Interface whose data is stored in the pcap src file', type=str, default='lo')
 analysis.add_argument('-m', '--modules', nargs='+', dest='monitors', help='Select modules to execute\nbandwidth: Analyze control network bandwidth usage\napi: Log api calls', type=str, choices=['bandwidth', 'api'], default=['bandwidth'])
 analysis.add_argument('-p', '--pcap', action='store', dest='pcap', help='Pcap src file used by all analysis modules', type=str, default='monitored.pcap')
-monitor.add_argument('-la', '--loopback-analysis', action='store', dest='pcap_lo', help='Analyse the loopback interface (lo) traffic as well', type=str, default=None)
+analysis.add_argument('-la', '--loopback-analysis', action='store', dest='pcap_lo', help='Analyse the loopback interface (lo) traffic as well', type=str, default=None)
 
 
 bandwidth = analysis.add_argument_group('Bandwidth')
