@@ -2,11 +2,11 @@ import re
 
 
 def equal(packet, attr, value):
-    return getattr(packet, attr, '').decode("utf-8") == value
+    return getattr(packet, attr, b'').decode("utf-8") == value
 
 
 def regex(packet, attr, value):
-    return bool(re.search(value, getattr(packet, attr, '').decode("utf-8")))
+    return bool(re.search(value, getattr(packet, attr, b'').decode("utf-8")))
 
 ACTIONS = dict()
 
