@@ -10,7 +10,7 @@ for i in $(seq 1 $execucoes)
 do
 	img_name="server-img-$i"
 	openstack image create --disk-format qcow2 --file trusty-server-cloudimg-amd64-disk1.img --public $img_name
-	python3 main.py monitor -sc -vm 1 -vi $img_name
+	python3 main.py monitor -lo -sc -vm 1 -vi $img_name
 	openstack server delete vm1
 	openstack network delete local
 	openstack image delete $img_name

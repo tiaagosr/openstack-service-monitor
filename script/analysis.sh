@@ -6,9 +6,9 @@ fi
 execucoes=$2
 iface=$1
 
-echo Executando análise na interface "$iface", com "$execucoes" execuções
+echo Executando análise na interface "$iface" e na loopback, com "$execucoes" execuções
 for i in $(seq 1 $execucoes)
 do
 	img_name="server-img-$i"
-	python3 main.py analysis -m bandwidth api -p "resultados/exec_$i.pcap" -i $iface
+	python3 main.py analysis -m bandwidth api -p "resultados/exec_$i.pcap" -la "resultados/exec_${i}_lo.pcap" -i $iface
 done
