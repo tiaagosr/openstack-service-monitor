@@ -117,7 +117,7 @@ class ScenarioManager:
         print("Iniciando cenario")
         current_time = PcapAnalysisModule.execution_time
         logging.info('Time %s: Started scenario', str(current_time()))
-        targeted_time = 10
+        targeted_time = 5
         vm_list = []
         for i in range(vm_count):
             vm_list.append(self.vm_create())

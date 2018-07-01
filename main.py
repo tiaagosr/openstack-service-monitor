@@ -26,15 +26,7 @@ analysis = subparser.add_parser('analysis', help='Execute pcap analysis modules'
 analysis.add_argument('-i', '--interface', action='store', dest='iface', help='Interface whose data is stored in the pcap src file', type=str, default='lo')
 analysis.add_argument('-m', '--modules', nargs='+', dest='monitors', help='Select modules to execute\nbandwidth: Analyze control network bandwidth usage\napi: Log api calls', type=str, choices=['bandwidth', 'api'], default=['bandwidth'])
 analysis.add_argument('-p', '--pcap', action='store', dest='pcap', help='Pcap src file used by all analysis modules', type=str, default='monitored.pcap')
-analysis.add_argument('-la', '--loopback-analysis', action='store', dest='pcap_lo', help='Analyse the loopback interface (lo) traffic as well', type=str, default=None)
-
-
-bandwidth = analysis.add_argument_group('Bandwidth')
-bandwidth.add_argument('-bp', '--bandwidth-pcap', action='store', dest='pcap_b', help='Bandwidth analysis pcap src file', type=str, default='')
-
-api_log = analysis.add_argument_group('Api logging')
-api_log.add_argument('-ap', '--api-pcap', action='store', dest='pcap_a', help='API logging pcap src file', type=str, default='')
-
+analysis.add_argument('-la', '--loopback-analysis', action='store', dest='pcap_lo', help='Analyse the loopback interface (lo) traffic as well', type=str,
 
 scenario = monitor.add_argument_group('Scenario')
 scenario.add_argument('-sc', '--execute-scenario', action='store_true', dest='use_scenario', help='Execute simple use scenario during monitoring')
@@ -124,12 +116,13 @@ if __name__ == '__main__':
         api_log = None
         monitor_bandwidth = None
         #Analysis Modules
+        pcaps = [args.pcap]
+        if args.pcap_lo is not None:
+            pcaps.append(args.pcap_lo)
         if 'bandwidth' in args.monitors:
-            pcap_path = args.pcap_b if args.pcap_b != '' else args.pcap
-            monitor_bandwidth = UseCase.analyze_link(pcap=pcap_path, session=session, pcap_lo=args.pcap_lo)
+            monitor_bandwidth = UseCase.analyze_link(pcap=pcaps, session=session)
         if 'api' in args.monitors:
-            pcap_path = args.pcap_a if args.pcap_a != '' else args.pcap
-            api_log = UseCase.log_api(pcap=pcap_path, session=session, pcap_lo=args.pcap_lo)
+            api_log = UseCase.log_api(pcap=pcaps, session=session)
         if monitor_bandwidth is not None:
             monitor_bandwidth.join()
         if api_log is not None:
