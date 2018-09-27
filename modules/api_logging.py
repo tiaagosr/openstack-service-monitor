@@ -64,12 +64,12 @@ class ApiLogging(PcapAnalysisModule):
             self.measure_packet(packet, self.difference_in_secs(min_time, current_time))
 
     def run(self):
-        print("Starting api analysis at "+self.pcap+"!")
+        print("API: Analysis started!")
 
         for file in self.pcap:
             self.analyse_pcap(file)
 
-        print("API analysis finished!")
+        print("API: Analysis finished!")
 
 
 class ApiData(Model):

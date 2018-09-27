@@ -79,14 +79,14 @@ class LinkMetering(PcapAnalysisModule):
             self.measure_packet(pkt, buffer)
 
     def run(self):
-        print("Starting metering analysis at "+self.pcap+"!")
+        print("Link Metering: Analysis started!")
 
         for file in self.pcap:
             self.analyse_pcap(file)
 
         for k, v in sorted(self.buffer.items()):
             v.save()
-        print("Link Metering: Execution finished!")
+        print("Link Metering: Analysis finished!")
 
     def start_analysis(self):
         self.start()
